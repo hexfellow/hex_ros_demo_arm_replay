@@ -1,0 +1,17 @@
+<!--#######################################-->
+<!-- Copyright (c) 2026  Dong Zhaorui.     -->
+<!-- All rights reserved.                  -->
+<!-- Author: Dong Zhaorui 847235539@qq.com -->
+<!-- Date  : 2026-06-30                    -->
+<!--#######################################-->
+
+<launch>
+    <!-- keyboard teleop -->
+    <include file="$(find hex_ros_teleop_keyboard)/launch/ros1/teleop_keyboard.launch"/>
+
+    <!-- real arm driver (archer y6) -->
+    <include file="$(find hex_ros_robot_arm)/launch/ros1/archer.launch"/>
+
+    <!-- gravity compensation node -->
+    <include file="$(find hex_ros_arm_comp)/launch/ros1/arm_comp.launch"/>
+</launch>
