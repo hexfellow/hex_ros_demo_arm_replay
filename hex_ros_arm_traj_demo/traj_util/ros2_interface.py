@@ -64,22 +64,12 @@ class DataInterface(InterfaceBase):
         self.__node.declare_parameter('rate_teleop', 100.0)
         self.__node.declare_parameter('model_urdf', "")
         self.__node.declare_parameter('model_frame_id', "base_link")
+        
         self.__node.declare_parameter(
             'pose_end_in_flange',
             [0.187, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
         )
-        self.__node.declare_parameter('gravity', [0.0, 0.0, -9.81])
-        self.__node.declare_parameter('arm_stable_pos',
-                                      [0.0, -1.5, 3.0, 0.07, 0.0, 0.0])
-        self.__node.declare_parameter('grip_stable_pos', [0.5])
-        self.__node.declare_parameter('arm_kp',
-                                      [200.0, 200.0, 250.0, 150.0, 100.0, 100.0])
-        self.__node.declare_parameter('arm_kd', [5.0, 5.0, 5.0, 5.0, 2.0, 2.0])
-        self.__node.declare_parameter('grip_kp', [10.0])
-        self.__node.declare_parameter('grip_kd', [0.5])
-        self.__node.declare_parameter('arrive_threshold', 0.06)
-        self.__node.declare_parameter('extra_mass', 0.1)
-
+        
         self._rate_param.update({
             "teleop":
             self.__node.get_parameter('rate_teleop').value,
@@ -92,26 +82,41 @@ class DataInterface(InterfaceBase):
             "pose_end_in_flange":
             list(self.__node.get_parameter('pose_end_in_flange').value),
         }
-        self._comp_param = {
-            "gravity":
-            list(self.__node.get_parameter('gravity').value),
-            "arm_stable_pos":
-            list(self.__node.get_parameter('arm_stable_pos').value),
-            "grip_stable_pos":
-            list(self.__node.get_parameter('grip_stable_pos').value),
-            "arm_kp":
-            list(self.__node.get_parameter('arm_kp').value),
-            "arm_kd":
-            list(self.__node.get_parameter('arm_kd').value),
-            "grip_kp":
-            list(self.__node.get_parameter('grip_kp').value),
-            "grip_kd":
-            list(self.__node.get_parameter('grip_kd').value),
-            "arrive_threshold":
-            self.__node.get_parameter('arrive_threshold').value,
-            "extra_mass":
-            self.__node.get_parameter('extra_mass').value,
-        }
+        
+        # """
+        # self.__node.declare_parameter('gravity', [0.0, 0.0, -9.81])
+        # self.__node.declare_parameter('arm_stable_pos',
+        #                               [0.0, -1.5, 3.0, 0.07, 0.0, 0.0])
+        # self.__node.declare_parameter('grip_stable_pos', [0.5])
+        # self.__node.declare_parameter('arm_kp',
+        #                               [200.0, 200.0, 250.0, 150.0, 100.0, 100.0])
+        # self.__node.declare_parameter('arm_kd', [5.0, 5.0, 5.0, 5.0, 2.0, 2.0])
+        # self.__node.declare_parameter('grip_kp', [10.0])
+        # self.__node.declare_parameter('grip_kd', [0.5])
+        # self.__node.declare_parameter('arrive_threshold', 0.06)
+        # self.__node.declare_parameter('extra_mass', 0.1)
+        # """
+        
+        # self._comp_param = {
+        #     "gravity":
+        #     list(self.__node.get_parameter('gravity').value),
+        #     "arm_stable_pos":
+        #     list(self.__node.get_parameter('arm_stable_pos').value),
+        #     "grip_stable_pos":
+        #     list(self.__node.get_parameter('grip_stable_pos').value),
+        #     "arm_kp":
+        #     list(self.__node.get_parameter('arm_kp').value),
+        #     "arm_kd":
+        #     list(self.__node.get_parameter('arm_kd').value),
+        #     "grip_kp":
+        #     list(self.__node.get_parameter('grip_kp').value),
+        #     "grip_kd":
+        #     list(self.__node.get_parameter('grip_kd').value),
+        #     "arrive_threshold":
+        #     self.__node.get_parameter('arrive_threshold').value,
+        #     "extra_mass":
+        #     self.__node.get_parameter('extra_mass').value,
+        # }
 
         ### publisher
         self.__manip_ctrl_pub = self.__node.create_publisher(
