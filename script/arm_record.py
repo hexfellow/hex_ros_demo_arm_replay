@@ -75,7 +75,7 @@ def main() -> None:
             })
             
             cnt += 1
-            if cnt >= 3:
+            if cnt >= 10:
                 cnt = 0
                 try:
                     stream.record(robot)

@@ -92,24 +92,22 @@ class DataInterface(InterfaceBase):
         self.__node.declare_parameter('lim_acc', [10.0, 10.0, 10.0, 10.0, 10.0, 10.0])
         self.__node.declare_parameter('jnt_eff', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         ### trajectory parameters: task config
-        self.__node.declare_parameter('mode', 'joint')
         self.__node.declare_parameter('init_position', [0.0, -1.5, 3.0, 0.0, 0.0, 0.0])
         self.__node.declare_parameter('end_position', [0.0, -1.5, 3.0, 0.0, 0.0, 0.0])
         self.__node.declare_parameter('expected_time', 10.0)
-        self.__node.declare_parameter('segment_duration', 0.01)
         self.__node.declare_parameter('loop', True)
         self.__node.declare_parameter('waypoints_path', '')
 
-        self._lim_vel = list(self.__node.get_parameter('lim_vel').value)
-        self._lim_acc = list(self.__node.get_parameter('lim_acc').value)
-        self._jnt_eff = list(self.__node.get_parameter('jnt_eff').value)
-        self._mode = str(self.__node.get_parameter('mode').value)
-        self._init_position = list(self.__node.get_parameter('init_position').value)
-        self._end_position = list(self.__node.get_parameter('end_position').value)
-        self._expected_time = float(self.__node.get_parameter('expected_time').value)
-        self._segment_duration = float(self.__node.get_parameter('segment_duration').value)
-        self._loop = bool(self.__node.get_parameter('loop').value)
-        self._waypoints_path = str(self.__node.get_parameter('waypoints_path').value)
+        self._traj_param = {
+            "lim_vel": list(self.__node.get_parameter('lim_vel').value),
+            "lim_acc": list(self.__node.get_parameter('lim_acc').value),
+            "jnt_eff": list(self.__node.get_parameter('jnt_eff').value),
+            "init_position": list(self.__node.get_parameter('init_position').value),
+            "end_position": list(self.__node.get_parameter('end_position').value),
+            "expected_time": float(self.__node.get_parameter('expected_time').value),
+            "loop": bool(self.__node.get_parameter('loop').value),
+            "waypoints_path": str(self.__node.get_parameter('waypoints_path').value),
+        }
 
         ### publisher
         self.__manip_ctrl_pub = self.__node.create_publisher(
@@ -145,35 +143,8 @@ class DataInterface(InterfaceBase):
     ####################
     ### trajectory parameters
     ####################
-    def get_lim_vel(self) -> list:
-        return list(self._lim_vel)
-
-    def get_lim_acc(self) -> list:
-        return list(self._lim_acc)
-
-    def get_jnt_eff(self) -> list:
-        return list(self._jnt_eff)
-
-    def get_mode(self) -> str:
-        return str(self._mode)
-
-    def get_init_position(self) -> list:
-        return list(self._init_position)
-
-    def get_end_position(self) -> list:
-        return list(self._end_position)
-
-    def get_expected_time(self) -> float:
-        return float(self._expected_time)
-
-    def get_segment_duration(self) -> float:
-        return float(self._segment_duration)
-
-    def get_loop(self) -> bool:
-        return bool(self._loop)
-
-    def get_waypoints_path(self) -> str:
-        return str(self._waypoints_path)
+    def get_traj_param(self) -> dict:
+        return self._traj_param
 
     def __spin(self):
         try:

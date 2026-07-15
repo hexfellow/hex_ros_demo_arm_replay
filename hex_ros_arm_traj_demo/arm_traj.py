@@ -14,6 +14,7 @@ import threading
 from typing import Optional
 
 import numpy as np
+import pexpect
 
 from ament_index_python.packages import get_package_share_directory
 
@@ -37,9 +38,9 @@ from hex_util_msg.dataclass.dataclass_robo import (
 
 from PointLoader import TaskConfigLoader
 from .TrajectoryController import (
+    SegmentedTrajectoryPlanner,
     TrajectoryControllerBase,
     TrajectoryPlanner,
-    SegmentedTrajectoryPlanner,
 )
 
 ARM_DOF = 6
@@ -55,7 +56,7 @@ class ArmComp:
         ### parameters
         self.__rate_param = self.__data_interface.get_rate_param()
         self.__model_param = self.__data_interface.get_model_param()
-        self.__waypoints_path = self.__data_interface.get_waypoints_path()
+        self.__traj_param = self.__data_interface.get_traj_param()
         self.__data_interface.logi(f"work rate: {self.__rate_param['ros']} hz")
         self.__data_interface.logi(
             f"traj rate: {self.__rate_param['traj']} hz")
@@ -71,14 +72,14 @@ class ArmComp:
 
         ### control presets for JNT mode commands
         self.__arm_stable_pos = np.asarray(
-            self.__data_interface.get_init_position(), dtype=np.float64)
+            self.__traj_param["init_position"], dtype=np.float64)
         self.__grip_stable_pos = np.zeros(GRIP_DOF, dtype=np.float64)
         self.__arm_lim_vel = np.asarray(
-            self.__data_interface.get_lim_vel(), dtype=np.float64)
+            self.__traj_param["lim_vel"], dtype=np.float64)
         self.__arm_lim_acc = np.asarray(
-            self.__data_interface.get_lim_acc(), dtype=np.float64)
+            self.__traj_param["lim_acc"], dtype=np.float64)
         self.__arm_jnt_eff = np.asarray(
-            self.__data_interface.get_jnt_eff(), dtype=np.float64)
+            self.__traj_param["jnt_eff"], dtype=np.float64)
         self.__arrive_threshold = 0.1
 
         ### threads
@@ -91,45 +92,36 @@ class ArmComp:
     
     
     def __init_mode(self):
-        # Load waypoints from JSON
-        pkg_share = get_package_share_directory('hex_ros_arm_traj_demo')
-        config_path = os.path.join(pkg_share, 'jsons', 'trajectory.json')
-        
-        config_loader = TaskConfigLoader(config_path=config_path)
-        waypoints = config_loader.get_waypoints()
-        init_pos = self.__arm_stable_pos.copy()
+        try:
 
-        # Create the trajectory player
-        mode = self.__data_interface.get_mode()
-        seg_duration = self.__data_interface.get_segment_duration()
-        if mode == 'segmented':
-            segment_ends = config_loader.get_segment_ends()
-            self.__traj_player: Optional[TrajectoryControllerBase] = \
-                SegmentedTrajectoryPlanner(
-                    waypoints=waypoints,
-                    segment_ends=segment_ends,
-                    segment_duration=seg_duration,
-                    init_pos=init_pos,
-                    hold_duration=3.0,
-                    return_home_duration=5.0,
-                    interpolate=True,
-                )
-            self.__data_interface.logi(
-                f"[arm_traj]: SegmentedTrajectoryPlanner, "
-                f"{len(waypoints)} waypoints, {len(segment_ends)} segments")
-        else:
+            # Load waypoints from JSON
+            pkg_share = get_package_share_directory('hex_ros_arm_traj_demo')
+            config_path = os.path.join(pkg_share, 'jsons', 'trajectory.json')
+            
+            self.__data_interface.logd(f"[init mode]: get path : {config_path}")
+            
+            config_loader = TaskConfigLoader(config_path=config_path)
+            waypoints = config_loader.get_waypoints()
+            init_pos = self.__arm_stable_pos.copy()
+
+            # Create the trajectory player
+            
+            seg_duration=0.01
+            
             self.__traj_player: Optional[TrajectoryControllerBase] = \
                 TrajectoryPlanner(
                     waypoints=waypoints,
                     segment_duration=seg_duration,
-                    interpolate=True,
+                    interpolate=False,
+                    
                 )
             self.__data_interface.logi(
                 f"[arm_traj]: TrajectoryPlanner, "
                 f"{len(waypoints)} waypoints, duration={seg_duration}s")
 
-        self.__data_interface.logd(f"[traj]: MOD: {mode}")
-        
+
+        except:
+            traceback.print_exc()
     def __is_running(self):
         return self.__data_interface.ok() and not self.__stop_event.is_set()
     
@@ -293,15 +285,20 @@ class ArmComp:
 
         traj_count = 0
         while self.__is_running():
-            traj_count += 1
-            if traj_count >= self.__traj_decim:
-                traj_count = 0
-                target_pos = self.__traj_player.get_target_position()
-                if target_pos is not None:
-                    ctrl = self.__build_traj_ctrl(target_pos)
-                    self.__data_interface.pub_manip_ctrl(ctrl)
-            self.__data_interface.sleep()
-
+            try: 
+                traj_count += 1
+                if traj_count >= self.__traj_decim:
+                    traj_count = 0
+                    target_pos = self.__traj_player.get_target_position()
+                    
+                    if target_pos is not None:
+                        ctrl = self.__build_traj_ctrl(target_pos)
+                        self.__data_interface.pub_manip_ctrl(ctrl)
+                        self.__data_interface.logd(f"pos: {target_pos[1]}")
+                        
+                self.__data_interface.sleep()
+            except Exception:
+                traceback.print_exc()
 
 def main():
     arm_comp = ArmComp()
