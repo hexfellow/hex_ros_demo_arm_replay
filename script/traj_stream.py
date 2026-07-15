@@ -9,6 +9,9 @@
 import json
 import os
 
+# 脚本所在目录的绝对路径，作为输出目录的基准
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
 
 class TrajStream:
     """连续轨迹记录器
@@ -56,7 +59,7 @@ class TrajStream:
     # Public API
     # ------------------------------------------------------------------
 
-    def start(self, output_path="../jsons/trajectory.json"):
+    def start(self, output_path=os.path.join(SCRIPT_DIR, "../jsons/trajectory.json")):
         """开始记录（新建文件 + 写 JSON 头部）
 
         Args:
@@ -112,6 +115,7 @@ class TrajStream:
 
         point = {
             "dt_s": dt_s,
+            "ts_ns": ts_ns,
             "jnt": [round(float(v), dec) for v in state.arm_state.jnt.position],
             "pose": {
                 "position": [

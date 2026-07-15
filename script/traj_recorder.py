@@ -9,6 +9,9 @@
 import json
 import threading
 import sys
+import os
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class TrajRecorder:
@@ -34,7 +37,7 @@ class TrajRecorder:
         c + Enter  → 清空所有记录点
     """
 
-    def __init__(self, output_path="trajectory.json"):
+    def __init__(self, output_path=os.path.join(SCRIPT_DIR, "trajectory.json")):
         self._output_path = output_path
         self._points = {}
         self._idx = 1
@@ -74,13 +77,13 @@ class TrajRecorder:
         """立即记录当前机械臂状态"""
         self._do_record(robot)
 
-    def save(self, output_path=None):
+    def save(self):
         """将记录点写入 JSON 文件
 
         Args:
             output_path: 输出路径，默认使用初始化时设置的路径
         """
-        path = output_path or self._output_path
+        path = self._output_path
         data = {"point": self._points}
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)

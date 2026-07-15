@@ -41,6 +41,7 @@ from hex_util_msg.dataclass.dataclass_robo import (
     HexDcRoboManipStateStamped,
 )
 from hex_util_msg.dataclass.dataclass_teleop import HexDcTeleopKeyboardState
+from rclpy.logging import LoggingSeverity
 
 from .interface_base import InterfaceBase
 
@@ -56,8 +57,11 @@ class DataInterface(InterfaceBase):
         rclpy.init()
         self.__node = rclpy.node.Node(name)
         self.__logger = self.__node.get_logger()
-        self.__node.declare_parameter('rate_ros', 500.0)
+        self.__node.get_logger().set_level(LoggingSeverity.DEBUG)
+        self.__node.declare_parameter('rate_ros', 1000.0)
         self._rate_param["ros"] = self.__node.get_parameter('rate_ros').value
+        self.__node.declare_parameter('rate_traj', 500.0)
+        self._rate_param["traj"] = self.__node.get_parameter('rate_traj').value
         self.__rate = self.__node.create_rate(self._rate_param["ros"])
 
         ### parameters
@@ -83,40 +87,29 @@ class DataInterface(InterfaceBase):
             list(self.__node.get_parameter('pose_end_in_flange').value),
         }
         
-        # """
-        # self.__node.declare_parameter('gravity', [0.0, 0.0, -9.81])
-        # self.__node.declare_parameter('arm_stable_pos',
-        #                               [0.0, -1.5, 3.0, 0.07, 0.0, 0.0])
-        # self.__node.declare_parameter('grip_stable_pos', [0.5])
-        # self.__node.declare_parameter('arm_kp',
-        #                               [200.0, 200.0, 250.0, 150.0, 100.0, 100.0])
-        # self.__node.declare_parameter('arm_kd', [5.0, 5.0, 5.0, 5.0, 2.0, 2.0])
-        # self.__node.declare_parameter('grip_kp', [10.0])
-        # self.__node.declare_parameter('grip_kd', [0.5])
-        # self.__node.declare_parameter('arrive_threshold', 0.06)
-        # self.__node.declare_parameter('extra_mass', 0.1)
-        # """
-        
-        # self._comp_param = {
-        #     "gravity":
-        #     list(self.__node.get_parameter('gravity').value),
-        #     "arm_stable_pos":
-        #     list(self.__node.get_parameter('arm_stable_pos').value),
-        #     "grip_stable_pos":
-        #     list(self.__node.get_parameter('grip_stable_pos').value),
-        #     "arm_kp":
-        #     list(self.__node.get_parameter('arm_kp').value),
-        #     "arm_kd":
-        #     list(self.__node.get_parameter('arm_kd').value),
-        #     "grip_kp":
-        #     list(self.__node.get_parameter('grip_kp').value),
-        #     "grip_kd":
-        #     list(self.__node.get_parameter('grip_kd').value),
-        #     "arrive_threshold":
-        #     self.__node.get_parameter('arrive_threshold').value,
-        #     "extra_mass":
-        #     self.__node.get_parameter('extra_mass').value,
-        # }
+        ### trajectory parameters: arm config
+        self.__node.declare_parameter('lim_vel', [10.0, 10.0, 10.0, 10.0, 10.0, 10.0])
+        self.__node.declare_parameter('lim_acc', [10.0, 10.0, 10.0, 10.0, 10.0, 10.0])
+        self.__node.declare_parameter('jnt_eff', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        ### trajectory parameters: task config
+        self.__node.declare_parameter('mode', 'joint')
+        self.__node.declare_parameter('init_position', [0.0, -1.5, 3.0, 0.0, 0.0, 0.0])
+        self.__node.declare_parameter('end_position', [0.0, -1.5, 3.0, 0.0, 0.0, 0.0])
+        self.__node.declare_parameter('expected_time', 10.0)
+        self.__node.declare_parameter('segment_duration', 0.01)
+        self.__node.declare_parameter('loop', True)
+        self.__node.declare_parameter('waypoints_path', '')
+
+        self._lim_vel = list(self.__node.get_parameter('lim_vel').value)
+        self._lim_acc = list(self.__node.get_parameter('lim_acc').value)
+        self._jnt_eff = list(self.__node.get_parameter('jnt_eff').value)
+        self._mode = str(self.__node.get_parameter('mode').value)
+        self._init_position = list(self.__node.get_parameter('init_position').value)
+        self._end_position = list(self.__node.get_parameter('end_position').value)
+        self._expected_time = float(self.__node.get_parameter('expected_time').value)
+        self._segment_duration = float(self.__node.get_parameter('segment_duration').value)
+        self._loop = bool(self.__node.get_parameter('loop').value)
+        self._waypoints_path = str(self.__node.get_parameter('waypoints_path').value)
 
         ### publisher
         self.__manip_ctrl_pub = self.__node.create_publisher(
@@ -148,6 +141,39 @@ class DataInterface(InterfaceBase):
 
         ### finish log
         print(f"#### DataInterface init: {self._name} ####")
+
+    ####################
+    ### trajectory parameters
+    ####################
+    def get_lim_vel(self) -> list:
+        return list(self._lim_vel)
+
+    def get_lim_acc(self) -> list:
+        return list(self._lim_acc)
+
+    def get_jnt_eff(self) -> list:
+        return list(self._jnt_eff)
+
+    def get_mode(self) -> str:
+        return str(self._mode)
+
+    def get_init_position(self) -> list:
+        return list(self._init_position)
+
+    def get_end_position(self) -> list:
+        return list(self._end_position)
+
+    def get_expected_time(self) -> float:
+        return float(self._expected_time)
+
+    def get_segment_duration(self) -> float:
+        return float(self._segment_duration)
+
+    def get_loop(self) -> bool:
+        return bool(self._loop)
+
+    def get_waypoints_path(self) -> str:
+        return str(self._waypoints_path)
 
     def __spin(self):
         try:
