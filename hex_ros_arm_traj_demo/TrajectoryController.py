@@ -4,7 +4,7 @@ import numpy as np
 from abc import ABC, abstractmethod
 from enum import Enum
 
-## TODO: 暂未支持 loop 参数，默认为循环播放
+#  j0 + (j1-j0) * (t-t0) / (t1-t0)
 
 class TrajectoryStatus(Enum):
     IDLE            = 0
@@ -38,19 +38,22 @@ class TrajectoryControllerBase(ABC):
 class TrajectoryPlanner(TrajectoryControllerBase):
     """Trajectory planner that supports smooth acceleration and deceleration planning"""
     
-    def __init__(self, waypoints, segment_duration=3.0, interpolate=True):
+    def __init__(self, waypoints, timestamps, interpolate='s_curve', loop=True):
         """
         Initialize trajectory planner
         waypoints: List of waypoints
-        segment_duration: Duration of each trajectory segment (seconds)
-        interpolate: If False, hold each waypoint as-is without S-curve blending
+        timestamps: List of timestamps in seconds (relative, ts[0]=0.0)
+        interpolate: Interpolation mode — 's_curve', 'linear', or 'hold'
+        loop: If True, repeat trajectory cyclically
         """
         self.waypoints = waypoints
-        self.segment_duration = segment_duration
+        self.timestamps = timestamps
         self.interpolate = interpolate
-        
+        self.loop = loop
+
         self.current_waypoint_index = 0
         self.trajectory_started = False
+        self.trajectory_complete = False
         self.start_time = None
         self.last_target_position = None  # Store last commanded position
         
@@ -58,51 +61,49 @@ class TrajectoryPlanner(TrajectoryControllerBase):
         """Start trajectory execution"""
         if not self.waypoints:
             return False
-        
+
         self.trajectory_started = True
+        self.trajectory_complete = False
         self.start_time = time.time()
         self.current_waypoint_index = 0
         return True
         
-    def get_target_position(self):
-        """Get the target position at the current moment"""
-        if not self.trajectory_started or not self.waypoints:
-            return None
-            
-        current_time = time.time()
-        elapsed_time = current_time - self.start_time
-        
-        total_segments = len(self.waypoints)
-        segment_index = int(elapsed_time / self.segment_duration) % total_segments
-        
-        segment_elapsed = elapsed_time % self.segment_duration
-        normalized_time = segment_elapsed / self.segment_duration
-        
-        if not self.interpolate:
-            target_position = np.array(self.waypoints[segment_index])
-            self.current_waypoint_index = segment_index
-            self.last_target_position = target_position
-            return target_position
 
-        start_waypoint = self.waypoints[segment_index]
-        end_waypoint = self.waypoints[(segment_index + 1) % total_segments]
-        
-        # Use S-curve interpolation to calculate current position
-        s = self._smooth_step(normalized_time)
-        
-        start_pos = np.array(start_waypoint)
-        end_pos = np.array(end_waypoint)
-        target_position = start_pos + s * (end_pos - start_pos)
-        
-        self.current_waypoint_index = segment_index
-        self.last_target_position = target_position  # Store for potential return home
-        
-        return target_position
+    ############################ comput ############################
     
-    def get_last_position(self):
-        """Get the last commanded position"""
-        return self.last_target_position
-        
+    def _compute_position(self, segment_index, segment_elapsed, seg_duration):
+        """Compute target position at the given segment.
+
+        Dispatches to the mode-specific function based on self.interpolate.
+        """
+        if self.interpolate == 'No':
+            return self._get_hold_position(segment_index)
+
+        start_pos = np.array(self.waypoints[segment_index])
+        end_pos = np.array(self.waypoints[segment_index + 1])
+
+        if self.interpolate == 's_curve':
+            normalized_time = segment_elapsed / seg_duration
+            return self._get_s_curve_position(start_pos, end_pos, normalized_time)
+        elif self.interpolate == 'linear':
+            return self._get_linear_position(start_pos, end_pos, segment_elapsed, seg_duration)
+
+    def _get_hold_position(self, segment_index):
+        """Hold at raw waypoint — no interpolation (stepped motion)."""
+        return np.array(self.waypoints[segment_index])
+
+    def _get_s_curve_position(self, start_pos, end_pos, normalized_time):
+        """S-curve interpolation — smooth accel/decel via 5th-degree polynomial."""
+        s = self._smooth_step(normalized_time)
+        return start_pos + s * (end_pos - start_pos)
+
+    def _get_linear_position(self, start_pos, end_pos, elapsed, duration):
+        """Linear interpolation — constant speed between waypoints.
+
+        Formula: start_pos + (end_pos - start_pos) * elapsed / duration
+        """
+        return start_pos + (end_pos - start_pos) * elapsed / duration
+
     def _smooth_step(self, t):
         """S-curve interpolation function that provides smooth acceleration and deceleration"""
         # Limit t to [0,1] range
@@ -110,29 +111,77 @@ class TrajectoryPlanner(TrajectoryControllerBase):
         
         # Use 5th degree polynomial for smoother interpolation: 6t⁵ - 15t⁴ + 10t³
         return 6 * t**5 - 15 * t**4 + 10 * t**3
+      
+    # ##################  get #########################
+
+    def get_target_position(self):
+        """Get the target position at the current moment"""
+        if not self.trajectory_started or not self.waypoints:
+            return None
+
+        if self.trajectory_complete:
+            return self.last_target_position
+
+        current_time = time.time()
+        trajectory_time = current_time - self.start_time
+
+        # Handle non-loop completion
+        if not self.loop and trajectory_time >= self.timestamps[-1]:
+            self.trajectory_complete = True
+            self.last_target_position = np.array(self.waypoints[-1])
+            return self.last_target_position
+
+        # Loop: wrap time into one cycle
+        if self.loop:
+            trajectory_time = trajectory_time % self.timestamps[-1]
+
+        # Binary search: find i s.t. timestamps[i] <= trajectory_time < timestamps[i+1]
+        segment_index = np.searchsorted(self.timestamps, trajectory_time, side='right') - 1
+        segment_index = max(0, min(segment_index, len(self.waypoints) - 2))
+
+        segment_elapsed = trajectory_time - self.timestamps[segment_index]
+        seg_duration = self.timestamps[segment_index + 1] - self.timestamps[segment_index]
+
+        target_position = self._compute_position(segment_index, segment_elapsed, seg_duration)
+        self.current_waypoint_index = segment_index
+        self.last_target_position = target_position
+
+        return target_position
+    
+
+    def get_last_position(self):
+        """Get the last commanded position"""
+        return self.last_target_position
         
+  
     def get_current_segment_info(self):
         """Get information about the current segment"""
         if not self.trajectory_started:
             return None
-            
+
         current_time = time.time()
-        elapsed_time = current_time - self.start_time
-        
-        segment_index = int(elapsed_time / self.segment_duration) % len(self.waypoints)
-        segment_elapsed = elapsed_time % self.segment_duration
-        segment_progress = segment_elapsed / self.segment_duration
-        
+        trajectory_time = current_time - self.start_time
+
+        if self.loop:
+            trajectory_time = trajectory_time % self.timestamps[-1]
+
+        segment_index = np.searchsorted(self.timestamps, trajectory_time, side='right') - 1
+        segment_index = max(0, min(segment_index, len(self.waypoints) - 2))
+
+        segment_elapsed = trajectory_time - self.timestamps[segment_index]
+        seg_duration = self.timestamps[segment_index + 1] - self.timestamps[segment_index]
+        segment_progress = segment_elapsed / seg_duration
+
         return {
             'segment_index': segment_index,
             'segment_progress': segment_progress,
-            'total_elapsed': elapsed_time
+            'total_elapsed': trajectory_time
         }
 
-class Point2Point(TrajectoryControllerBase):
+class Move2TargetPlanner(TrajectoryControllerBase):
     """Controller for smooth return to home position"""
     
-    def __init__(self, start_position, home_position, duration):
+    def __init__(self, start_position, home_position, duration=5):
         """
         Initialize return home controller
         start_position: Starting position (current position when Ctrl+C is pressed)

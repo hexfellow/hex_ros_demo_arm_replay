@@ -95,31 +95,32 @@ class ArmComp:
             
             # Load waypoints from JSON
             pkg_share = get_package_share_directory('hex_ros_arm_traj_demo')
-            config_path = os.path.join(pkg_share, 'jsons', 'trajectory.json')
+            config_path = os.path.join(pkg_share, 'jsons', 'trajectory2.json')
             
             self.__data_interface.logd(f"[init mode]: get path : {config_path}")
             
             config_loader = TaskConfigLoader(config_path=config_path)
             waypoints = config_loader.get_waypoints()
-            seg_duration=config_loader.get_time_interval()
-            interpolate = config_loader.enable_s_curve()
-            
+            ts_list = config_loader.get_timestamps()
+            interpolate = config_loader.get_interpolate_type()
+
             self.__data_interface.logd(f"[init mode]: get path : {config_path}")
-            
+
             init_pos = self.__arm_stable_pos.copy()
 
             # Create the trajectory player
-            
+
             self.__traj_player: Optional[TrajectoryControllerBase] = \
                 TrajectoryPlanner(
                     waypoints=waypoints,
-                    segment_duration=seg_duration,
+                    timestamps=ts_list,
                     interpolate=interpolate,
-                    
                 )
             self.__data_interface.logi(
                 f"[arm_traj]: TrajectoryPlanner, "
-                f"{len(waypoints)} waypoints, duration={seg_duration}s, enable s curve: {interpolate}")
+                f"{len(waypoints)} waypoints, "
+                f"duration={ts_list[-1]:.3f}s, "
+                f"interpolate={interpolate}")
 
 
         except:
