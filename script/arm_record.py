@@ -6,6 +6,7 @@
 # Date  : 2026-03-26
 ################################################################
 
+import argparse
 import time
 import traceback
 import numpy as np
@@ -30,6 +31,34 @@ def _stamp_to_ns(stamp) -> int:
     return int(stamp.secs * 1_000_000_000 + stamp.nsecs)
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Arm trajectory recorder / streamer")
+    parser.add_argument(
+        "--mode",
+        type=str,
+        choices=["record", "stream"],
+        default="record",
+        help="'record': full trajectory recording (default), 'stream': light-weight streaming only",
+    )
+    parser.add_argument(
+        "--ctrl-rate",
+        type=int,
+        default=1000,
+        help="Control loop rate in Hz (default: 1000, passed to HexRate)",
+    )
+    parser.add_argument(
+        "--samp-rate",
+        type=int,
+        default=500,
+        help="Sampling rate in Hz (default: 500, controls how often data is recorded)",
+    )
+    args = parser.parse_args()
+    mode = args.mode
+    ctrl_rate = args.ctrl_rate
+    samp_rate = args.samp_rate
+
+    # Compute sampling decimation: record once every N loop iterations
+    sample_interval = max(1, round(ctrl_rate / samp_rate))
+
     params = HexRobotArcherY6Params(
         host="172.18.0.50",
         port=8439,
@@ -46,24 +75,29 @@ def main() -> None:
         robot.start()
         print(f"dofs: {robot.get_dofs()}")
 
-        rate = HexRate(1000)
+        rate = HexRate(ctrl_rate)
 
-        recorder = TrajRecorder("points.json")
-        recorder.start()
+        if mode == "record":
+            recorder = TrajRecorder("../jsons/trajectory.json")
+            recorder.start()
+            print("[Mode] full trajectory recording")
 
-        stream = TrajStream(dec=3)
-        stream.start()
-        
+        if mode == "stream":
+            stream = TrajStream(dec=3)
+            stream.start()
+            print("[Mode] light-weight streaming")
+
         cnt = 0
 
         while robot.is_working():
             rate.sleep()
-            try:
-                recorder.check_and_record(robot)
-            except Exception as e:
-                print(f"\033[33m[Recorder] check_and_record error: {e}\033[0m")
+            if mode == "record":
+                assert recorder is not None
+                try:
+                    recorder.check_and_record(robot)
+                except Exception as e:
+                    print(f"\033[33m[Recorder] check_and_record error: {e}\033[0m")
 
-           
             robot.set_arm_mit_cmd({
                 "ts_ns": ns_now(),
                 "jnt_pos": np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
@@ -73,15 +107,17 @@ def main() -> None:
                 "mit_kd": np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
                 "grav": HexDcBaseVector3(0.0, 0.0, -9.8),
             })
-            
+
             cnt += 1
-            if cnt >= 10:
+            if cnt >= sample_interval:
                 cnt = 0
-                try:
-                    stream.record(robot)
-                except Exception as e:
-                    print(f"\033[33m[TrajStream] record error: {e}\033[0m")     
-                    
+                if mode == "stream":
+                    assert stream is not None
+                    try:
+                        stream.record(robot)
+                    except Exception as e:
+                        print(f"\033[33m[TrajStream] record error: {e}\033[0m")
+
 
     except KeyboardInterrupt:
         pass
@@ -93,18 +129,20 @@ def main() -> None:
         if robot is not None:
             robot.stop()
             print("robot stopped cleanly")
-        try:
+        if mode == "record":
+            try:
+                if recorder is not None:
+                    recorder.save()
+            except Exception as e:
+                print(f"\033[33m[Recorder] save error: {e}\033[0m")
             if recorder is not None:
-                recorder.save()
-        except Exception as e:
-            print(f"\033[33m[Recorder] save error: {e}\033[0m")
-        if recorder is not None:
-            recorder.stop()
-        try:
-            if stream is not None:
-                stream.stop()
-        except Exception as e:
-            print(f"\033[33m[TrajStream] stop error: {e}\033[0m")
+                recorder.stop()
+        if mode == "stream":
+            try:
+                if stream is not None:
+                    stream.stop()
+            except Exception as e:
+                print(f"\033[33m[TrajStream] stop error: {e}\033[0m")
 
 
 if __name__ == "__main__":

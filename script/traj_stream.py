@@ -114,7 +114,7 @@ class TrajStream:
         idx = self._seq + 1  # 1-based 序号
 
         point = {
-            "dt_s": dt_s,
+            # "dt_s": dt_s,
             "ts_ns": ts_ns,
             "jnt": [round(float(v), dec) for v in state.arm_state.jnt.position],
             "pose": {

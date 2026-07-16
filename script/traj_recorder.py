@@ -127,8 +127,10 @@ class TrajRecorder:
         pose = state.arm_state.pose
 
         _d_point =2 
+        ts_ns = _ts_to_ns(state.header.stamp)
         
         self._points[str(self._idx)] = {
+            "ts_ns": ts_ns,
             "jnt": [round(float(v), _d_point) for v in state.arm_state.jnt.position],
             "pose": {
                 "position": [
@@ -146,3 +148,6 @@ class TrajRecorder:
         }
         print(f"[Recorder] Recorded point {self._idx}")
         self._idx += 1
+def _ts_to_ns(stamp) -> int:
+    """将 HexDcBaseTime 转换为纳秒"""
+    return int(stamp.secs * 1_000_000_000 + stamp.nsecs)

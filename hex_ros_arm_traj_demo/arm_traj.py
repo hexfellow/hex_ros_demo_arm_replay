@@ -93,7 +93,7 @@ class ArmComp:
     
     def __init_mode(self):
         try:
-
+            
             # Load waypoints from JSON
             pkg_share = get_package_share_directory('hex_ros_arm_traj_demo')
             config_path = os.path.join(pkg_share, 'jsons', 'trajectory.json')
@@ -102,17 +102,18 @@ class ArmComp:
             
             config_loader = TaskConfigLoader(config_path=config_path)
             waypoints = config_loader.get_waypoints()
+            seg_duration=config_loader.get_time_interval()
+            interpolate = config_loader.enable_s_curve()
+            
             init_pos = self.__arm_stable_pos.copy()
 
             # Create the trajectory player
-            
-            seg_duration=0.01
             
             self.__traj_player: Optional[TrajectoryControllerBase] = \
                 TrajectoryPlanner(
                     waypoints=waypoints,
                     segment_duration=seg_duration,
-                    interpolate=False,
+                    interpolate=interpolate,
                     
                 )
             self.__data_interface.logi(
