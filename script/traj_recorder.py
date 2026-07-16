@@ -10,6 +10,8 @@ import json
 import threading
 import sys
 import os
+import termios
+import tty
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -32,9 +34,9 @@ class TrajRecorder:
         recorder.save()
 
     键盘指令:
-        r + Enter  → 记录当前点
-        s + Enter  → 保存到文件
-        c + Enter  → 清空所有记录点
+        r  → 记录当前点
+        s  → 保存到文件
+        c  → 清空所有记录点
     """
 
     def __init__(self, output_path=os.path.join(SCRIPT_DIR, "trajectory.json")):
@@ -57,7 +59,7 @@ class TrajRecorder:
         self._running = True
         self._thread = threading.Thread(target=self._input_loop, daemon=True)
         self._thread.start()
-        print("[Recorder] Started. Press 'r'+Enter to record, 's'+Enter to save.")
+        print("[Recorder] Started. Press 'r' to record, 's' to save, 'c' to clear.")
 
     def stop(self):
         """停止后台监听线程"""
@@ -100,22 +102,29 @@ class TrajRecorder:
     # ------------------------------------------------------------------
 
     def _input_loop(self):
-        """后台线程：持续读取键盘输入"""
-        while self._running:
-            try:
-                line = sys.stdin.readline().strip().lower()
-            except (EOFError, OSError):
-                break
-            if not self._running:
-                break
-            if line == "r":
-                self._record_flag = True
-                print("[Recorder] Record triggered!")
-            elif line == "s":
-                self._save_flag = True
-                print("[Recorder] Save triggered!")
-            elif line == "c":
-                self.clear()
+        """后台线程：持续读取键盘输入（单按键，无需回车）"""
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setcbreak(fd)
+            while self._running:
+                try:
+                    ch = sys.stdin.read(1)
+                except (EOFError, OSError):
+                    break
+                if not self._running or not ch:
+                    break
+                ch = ch.lower()
+                if ch == "r":
+                    self._record_flag = True
+                    print("[Recorder] Record triggered!")
+                elif ch == "s":
+                    self._save_flag = True
+                    print("[Recorder] Save triggered!")
+                elif ch == "c":
+                    self.clear()
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
     def _do_record(self, robot):
         """从 robot 获取状态并记录"""
