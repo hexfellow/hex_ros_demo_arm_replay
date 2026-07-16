@@ -104,8 +104,6 @@ class ArmComp:
             config_loader = TaskConfigLoader(config_path=config_path)
             waypoints = config_loader.get_waypoints()
             ts_list = config_loader.get_timestamps()
-            # interpolate = config_loader.get_interpolate_type()
-            interpolate = "linear"
 
             self.__data_interface.logd(f"[init mode]: get path : {config_path}")
 
@@ -117,13 +115,12 @@ class ArmComp:
                 TrajectoryPlanner(
                     waypoints=waypoints,
                     timestamps=ts_list,
-                    interpolate=interpolate,
                 )
             self.__data_interface.logi(
                 f"[arm_traj]: TrajectoryPlanner, "
                 f"{len(waypoints)} waypoints, "
                 f"duration={ts_list[-1]:.3f}s, "
-                f"interpolate={interpolate}")
+                f"interpolate=Linear")
 
         except:
             traceback.print_exc()
