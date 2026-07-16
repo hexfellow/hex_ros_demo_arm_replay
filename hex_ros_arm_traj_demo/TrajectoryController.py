@@ -5,14 +5,6 @@ from abc import ABC, abstractmethod
 from enum import Enum
 
 #  j0 + (j1-j0) * (t-t0) / (t1-t0)
-
-class TrajectoryStatus(Enum):
-    IDLE            = 0
-    Trajectory      = 1
-    Return_Home     = 2
-    Finished        = 3
-    Hold            = 4
-
 DEFAULT_INIT_POS = [0.0, -1.5, 3.0, 0.0, 0.0, 0.0]
 
 DEFAULT_RETURN_HOME_DURATION = 10.0
@@ -30,15 +22,11 @@ class TrajectoryControllerBase(ABC):
         """Get the target position at the current moment."""
         pass
 
-    def _smooth_step(self, t):
-        """S-curve interpolation: 5th-degree polynomial for smooth accel/decel."""
-        t = max(0.0, min(1.0, t))
-        return 6 * t**5 - 15 * t**4 + 10 * t**3
 
 class TrajectoryPlanner(TrajectoryControllerBase):
     """Trajectory planner that supports smooth acceleration and deceleration planning"""
     
-    def __init__(self, waypoints, timestamps, interpolate='s_curve', loop=True):
+    def __init__(self, waypoints, timestamps, interpolate='linear', loop=True):
         """
         Initialize trajectory planner
         waypoints: List of waypoints
@@ -123,6 +111,7 @@ class TrajectoryPlanner(TrajectoryControllerBase):
             return self.last_target_position
 
         current_time = time.time()
+        # ## 已完成时间
         trajectory_time = current_time - self.start_time
 
         # Handle non-loop completion
@@ -135,10 +124,11 @@ class TrajectoryPlanner(TrajectoryControllerBase):
         if self.loop:
             trajectory_time = trajectory_time % self.timestamps[-1]
 
-        # Binary search: find i s.t. timestamps[i] <= trajectory_time < timestamps[i+1]
+        # 二分查找抓点 -- 边界判断
         segment_index = np.searchsorted(self.timestamps, trajectory_time, side='right') - 1
         segment_index = max(0, min(segment_index, len(self.waypoints) - 2))
 
+        # 下一个时间点的时间
         segment_elapsed = trajectory_time - self.timestamps[segment_index]
         seg_duration = self.timestamps[segment_index + 1] - self.timestamps[segment_index]
 

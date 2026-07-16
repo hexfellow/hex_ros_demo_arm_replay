@@ -10,11 +10,6 @@ import json
 import numpy as np
 import os
 
-## TODO: 对loader进行降采样和拟合处理
-
-
-
-
 class TaskConfigLoader:
     """Load recorded trajectory from trajectory.json and provide config for planners."""
 
@@ -81,6 +76,7 @@ class TaskConfigLoader:
         if 'samp_hz' in self.info:
             samp_hz = self.info['samp_hz']
             if samp_hz > 0:
+
                 return 1.0 / samp_hz
 
         # 降级：从 metadata 推算平均间隔
@@ -98,12 +94,3 @@ class TaskConfigLoader:
             'linear' — 字段缺失，不规律录制，线性插值平滑过渡
         """
         return 'No' if 'samp_hz' in self.info else 'linear'
-    
-    def __reduce_sampling_points(self):
-        pass
-    
-    def __fit_trajectory(self):
-        pass
-    
-    
-    
