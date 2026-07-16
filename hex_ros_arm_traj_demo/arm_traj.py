@@ -38,7 +38,6 @@ from hex_util_msg.dataclass.dataclass_robo import (
 
 from PointLoader import TaskConfigLoader
 from .TrajectoryController import (
-    SegmentedTrajectoryPlanner,
     TrajectoryControllerBase,
     TrajectoryPlanner,
 )
@@ -105,6 +104,8 @@ class ArmComp:
             seg_duration=config_loader.get_time_interval()
             interpolate = config_loader.enable_s_curve()
             
+            self.__data_interface.logd(f"[init mode]: get path : {config_path}")
+            
             init_pos = self.__arm_stable_pos.copy()
 
             # Create the trajectory player
@@ -118,7 +119,7 @@ class ArmComp:
                 )
             self.__data_interface.logi(
                 f"[arm_traj]: TrajectoryPlanner, "
-                f"{len(waypoints)} waypoints, duration={seg_duration}s")
+                f"{len(waypoints)} waypoints, duration={seg_duration}s, enable s curve: {interpolate}")
 
 
         except:
@@ -260,13 +261,17 @@ class ArmComp:
 
     def __init_process(self):
         try:
+            ### TODO： 缓慢上线到一个target，默认是waypoint的第一个点。
             self.__move_to_stable("init")
+            ### TODO： wait order
         except Exception:
             traceback.print_exc()
 
     def __exit_process(self):
         try:
+            ### TODO： 停止后先不推出，等待指令缓慢上线到下一个点。
             self.__move_to_stable("exit")
+            ### TODO： wait order
         except Exception:
             traceback.print_exc()
 

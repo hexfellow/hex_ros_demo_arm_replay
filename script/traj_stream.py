@@ -21,7 +21,7 @@ class TrajStream:
 
     使用方式:
         stream = TrajStream()
-        stream.start()
+        stream.start(samp_hz=500)
 
         while robot.is_working():
             rate.sleep()
@@ -59,11 +59,12 @@ class TrajStream:
     # Public API
     # ------------------------------------------------------------------
 
-    def start(self, output_path=os.path.join(SCRIPT_DIR, "../jsons/trajectory.json")):
+    def start(self, output_path=os.path.join(SCRIPT_DIR, "../jsons/trajectory.json"), samp_hz=None):
         """开始记录（新建文件 + 写 JSON 头部）
 
         Args:
             output_path: 输出文件路径
+            samp_hz: 采样频率 (Hz)，由外部控制循环决定，写入 JSON metadata
         """
         self._seq = 0
         self._start_ns = None
@@ -85,6 +86,8 @@ class TrajStream:
         self._info_anchor_total = self._f.tell()
         self._f.write(self._ffmt(0, 12))
         self._f.write(b',\n')
+        if samp_hz is not None:
+            self._f.write(f'    "samp_hz": {samp_hz},\n'.encode())
         self._f.write(b'    "dof": 6\n')
         self._f.write(b'  },\n')
         self._f.write(b'  "point": {\n')

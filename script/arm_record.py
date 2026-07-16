@@ -84,7 +84,7 @@ def main() -> None:
 
         if mode == "stream":
             stream = TrajStream(dec=3)
-            stream.start()
+            stream.start(samp_hz=samp_rate)
             print("[Mode] light-weight streaming")
 
         cnt = 0

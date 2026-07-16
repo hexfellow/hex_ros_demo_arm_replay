@@ -20,9 +20,10 @@ class TrajRecorder:
     """机械臂轨迹点记录器
 
     通过后台键盘监听，在控制循环中记录机械臂的关节状态和末端位姿。
+    输出格式与 TrajStream 统一（含 info 元数据头）。
 
     使用方式:
-        recorder = TrajRecorder("points.json")
+        recorder = TrajRecorder("trajectory.json")
         recorder.start()
 
         while robot.is_working():
@@ -39,10 +40,13 @@ class TrajRecorder:
         c  → 清空所有记录点
     """
 
-    def __init__(self, output_path=os.path.join(SCRIPT_DIR, "trajectory.json")):
+    def __init__(self, output_path=os.path.join(SCRIPT_DIR, "../jsons/trajectory.json"), dec=2):
         self._output_path = output_path
+        self._dec = dec
         self._points = {}
         self._idx = 1
+        self._start_ns = None
+        self._last_ns = None
         self._record_flag = False
         self._save_flag = False
         self._running = False
@@ -80,13 +84,21 @@ class TrajRecorder:
         self._do_record(robot)
 
     def save(self):
-        """将记录点写入 JSON 文件
+        """将记录点写入 JSON 文件（格式与 TrajStream 统一）
 
         Args:
             output_path: 输出路径，默认使用初始化时设置的路径
         """
         path = self._output_path
-        data = {"point": self._points}
+        data = {
+            "info": {
+                "start_time_ns": self._start_ns or 0,
+                "end_time_ns": self._last_ns or 0,
+                "total_points": len(self._points),
+                "dof": 6,
+            },
+            "point": self._points,
+        }
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
         print(f"[Recorder] Saved {len(self._points)} points to {path}")
@@ -95,6 +107,8 @@ class TrajRecorder:
         """清空所有记录点"""
         self._points = {}
         self._idx = 1
+        self._start_ns = None
+        self._last_ns = None
         print("[Recorder] Cleared all points.")
 
     # ------------------------------------------------------------------
@@ -134,24 +148,27 @@ class TrajRecorder:
             return
 
         pose = state.arm_state.pose
-
-        _d_point =2 
+        dec = self._dec
         ts_ns = _ts_to_ns(state.header.stamp)
-        
+
+        if self._start_ns is None:
+            self._start_ns = ts_ns
+        self._last_ns = ts_ns
+
         self._points[str(self._idx)] = {
             "ts_ns": ts_ns,
-            "jnt": [round(float(v), _d_point) for v in state.arm_state.jnt.position],
+            "jnt": [round(float(v), dec) for v in state.arm_state.jnt.position],
             "pose": {
                 "position": [
-                    round(float(pose.position.x), _d_point),
-                    round(float(pose.position.y), _d_point),
-                    round(float(pose.position.z), _d_point),
+                    round(float(pose.position.x), dec),
+                    round(float(pose.position.y), dec),
+                    round(float(pose.position.z), dec),
                 ],
                 "orientation": [
-                    round(float(pose.orientation.w), _d_point),
-                    round(float(pose.orientation.x), _d_point),
-                    round(float(pose.orientation.y), _d_point),
-                    round(float(pose.orientation.z), _d_point),
+                    round(float(pose.orientation.w), dec),
+                    round(float(pose.orientation.x), dec),
+                    round(float(pose.orientation.y), dec),
+                    round(float(pose.orientation.z), dec),
                 ],
             },
         }
