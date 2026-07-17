@@ -37,6 +37,24 @@ def main() -> None:
         default=100,
         help="Sampling rate in Hz (default: 100, controls how often data is recorded)",
     )
+    parser.add_argument(
+        "--ip",
+        type=str,
+        required=True,
+        help="Robot IP address",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        required=True,
+        help="Robot port",
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        required=True,
+        help="Output file path for trajectory data",
+    )
     args = parser.parse_args()
     mode = args.mode
     ctrl_rate = args.ctrl_rate
@@ -46,8 +64,8 @@ def main() -> None:
     sample_interval = max(1, round(ctrl_rate / samp_rate))
 
     params = HexRobotArcherY6Params(
-        host="172.18.0.50",
-        port=8439,
+        host=args.ip,
+        port=args.port,
         ctrl_rate=500,
         state_buffer_size=200,
         sens_ts=False,
@@ -64,13 +82,13 @@ def main() -> None:
         rate = HexRate(ctrl_rate)
 
         if mode == "record":
-            recorder = TrajRecorder("../jsons/trajectory.json")
+            recorder = TrajRecorder(args.output)
             recorder.start()
             print("[Mode] full trajectory recording")
 
         if mode == "stream":
             stream = TrajStream(dec=3)
-            stream.start(samp_hz=samp_rate)
+            stream.start(output_path=args.output, samp_hz=samp_rate)
             print("[Mode] light-weight streaming")
 
         cnt = 0

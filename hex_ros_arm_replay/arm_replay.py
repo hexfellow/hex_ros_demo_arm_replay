@@ -37,7 +37,7 @@ from hex_util_msg.dataclass.dataclass_robo import (
 )
 
 from PointLoader import TaskConfigLoader
-from .TrajectoryController import (
+from TrajectoryController import (
     TrajectoryPlanner,
     Move2TargetPlanner,
 )
