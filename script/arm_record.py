@@ -16,8 +16,8 @@ sys.path.insert(
 from hex_driver_robot import HexRobotArcherY6, HexRobotArcherY6Params
 from hex_util_msg.dataclass import HexDcBaseVector3
 
-from replay_recorder import TrajRecorder
-from replay_stream import TrajStream
+from traj_recorder import TrajRecorder
+from traj_stream import TrajStream
 
 def _stamp_to_ns(stamp) -> int:
     """Convert HexDcBaseTime stamp to nanoseconds."""
