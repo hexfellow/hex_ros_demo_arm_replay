@@ -48,8 +48,8 @@ def main() -> None:
     parser.add_argument(
         "--samp-rate",
         type=int,
-        default=500,
-        help="Sampling rate in Hz (default: 500, controls how often data is recorded)",
+        default=100,
+        help="Sampling rate in Hz (default: 100, controls how often data is recorded)",
     )
     args = parser.parse_args()
     mode = args.mode
@@ -84,7 +84,7 @@ def main() -> None:
 
         if mode == "stream":
             stream = TrajStream(dec=3)
-            stream.start(samp_hz=samp_rate)
+            stream.start(samp_hz=1/samp_rate)
             print("[Mode] light-weight streaming")
 
         cnt = 0
