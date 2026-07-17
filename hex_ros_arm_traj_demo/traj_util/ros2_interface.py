@@ -105,7 +105,7 @@ class DataInterface(InterfaceBase):
             "end_position": list(self.__node.get_parameter('end_position').value),
             "expected_time": float(self.__node.get_parameter('expected_time').value),
             "loop": bool(self.__node.get_parameter('loop').value),
-            "waypoints_path": str(self.__node.get_parameter('waypoints_path').value),
+            "waypoints_path": self.__node.get_parameter('waypoints_path').value or "",
         }
 
         ### publisher
