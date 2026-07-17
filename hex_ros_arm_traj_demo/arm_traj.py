@@ -46,7 +46,6 @@ from .TrajectoryController import (
 ARM_DOF = 6
 GRIP_DOF = 1
 
-
 class ArmComp:
 
     def __init__(self):
@@ -105,10 +104,6 @@ class ArmComp:
             waypoints = config_loader.get_waypoints()
             ts_list = config_loader.get_timestamps()
 
-            self.__data_interface.logd(f"[init mode]: get path : {config_path}")
-
-            init_pos = self.__arm_stable_pos.copy()
-
             # Create the trajectory player
 
             self.__traj_player: Optional[TrajectoryControllerBase] = \
@@ -122,8 +117,10 @@ class ArmComp:
                 f"duration={ts_list[-1]:.3f}s, "
                 f"interpolate=Linear")
 
-        except:
-            traceback.print_exc()
+        except Exception as e:
+            # traceback.print_exc()
+            self.__data_interface.loge(f"[arm_traj]: init mod err,  {e} \n")
+            
     def __is_running(self):
         return self.__data_interface.ok() and not self.__stop_event.is_set()
     
@@ -136,7 +133,6 @@ class ArmComp:
         self.__teleop_thread.start()
         self.__init_process()
         self.__data_interface.logi("[arm_comp]: start work")
-        
 
     def run(self):
         try:
@@ -203,7 +199,7 @@ class ArmComp:
     def __move_first_target(self):
         """平滑移动到 waypoints[0]，时长用 expected_time"""
         if self.__traj_player is None or not self.__traj_player.waypoints:
-            self.__data_interface.loge("[arm_traj]: no waypoints, skip move_first_target")
+            self.__data_interface.logw("[arm_traj]: no waypoints, skip move_first_target")
             return
 
         waypoint0 = np.asarray(self.__traj_player.waypoints[0], dtype=np.float64)
@@ -256,7 +252,7 @@ class ArmComp:
         if start_pos is None:
             state = self.__data_interface.get_manip_state(latest=True)
             if state is None:
-                self.__data_interface.loge("[arm_traj]: cannot get start pos, skip")
+                self.__data_interface.logw("[arm_traj]: cannot get start pos, skip")
                 return
             start_pos = np.asarray(
                 state.manip_state.arm_state.jnt.position, dtype=np.float64)
@@ -323,24 +319,23 @@ class ArmComp:
             if not self.__start_event.is_set():
                 return
 
-        except Exception:
-            traceback.print_exc()
+        except Exception as e:
+            self.__data_interface.loge(f"[arm_traj]: init process err,  {e} \n")
+            # traceback.print_exc()
 
     def __exit_process(self):
         try:
             self.__return_to_home()
         except Exception:
-            traceback.print_exc()
+            # traceback.print_exc()
+            self.__data_interface.loge(f"[arm_traj]: init process err,  {e} \n")
 
     def __work_process(self):
         self.__data_interface.logi("[arm traj]: start play")
 
-        self.__data_interface.logd(f"work start")
-
         if self.__traj_player is None:
             self.__data_interface.loge("[arm traj]: no trajectory player")
             return
-
 
         if not self.__traj_player.start_trajectory():
             self.__data_interface.loge("[arm traj]: failed to start trajectory")
