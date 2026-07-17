@@ -14,7 +14,7 @@
 
 ## 1. 包的简介
 
-这是 **Archer Y6** 机械臂的**轨迹演示包**，包含轨迹录制与回放两个子系统。
+这是 **HEXFELLOW** 机械臂的**轨迹演示包**，包含轨迹录制与回放两个。
 
 本包提供两个主要功能：
 
@@ -118,8 +118,8 @@ git clone https://github.com/hexfellow/teleop_keyboard.git
 ### 1. 构建工作空间
 
 ```shell
-mkdir -p hex_ws/src
-cd hex_ws/src
+mkdir -p <your_ws>/src
+cd <your_ws>/src
 ```
 
 ### 2. 克隆包
@@ -138,45 +138,59 @@ git clone https://github.com/hexfellow/teleop_keyboard.git
 
 ```shell
 source /opt/ros/noetic/setup.bash
-cd hex_ws
+cd <your_ws>
 catkin_make
-source devel/setup.bash --extend
+source devel/setup.bash 
 ```
 
 **ROS 2：**
 
 ```shell
 source /opt/ros/humble/setup.bash
-cd hex_ws
+cd <your_ws>
 colcon build
-source install/setup.bash --extend
+source install/setup.bash 
 ```
 
 
 
 ### 4. 使用包
 
-启动 `arm_replay` 回放节点，加载轨迹 JSON 并驱动机械臂运动：
+arm_replay 提供多个 launch 文件，一键启动不同场景（轨迹 JSON 路径在 `config/<ros_version>/replay_param.yaml` 中配置）：
 
 **ROS 1：**
 
 ```shell
-rosrun hex_ros_arm_replay arm_replay _waypoints_path:={/path/to}/trajectory.json
+# 仅启动回放节点
+roslaunch hex_ros_arm_replay arm_replay.launch
+
+# 真机完整启动：键盘遥控 + 机械臂驱动 + 轨迹回放
+roslaunch hex_ros_arm_replay real_replay.launch
+
+# 仿真完整启动：仿真环境 + 键盘遥控 + 轨迹回放
+roslaunch hex_ros_arm_replay sim_replay.launch viewer:=true rviz:=true
 ```
 
 **ROS 2：**
 
 ```shell
-ros2 run hex_ros_arm_replay arm_replay --ros-args -p waypoints_path:={/path/to}/trajectory.json
-```
+# 仅启动回放节点
+ros2 launch hex_ros_arm_replay arm_replay.launch.py
+
+# 真机完整启动：键盘遥控 + 机械臂驱动 + 轨迹回放
+ros2 launch hex_ros_arm_replay real_traj.launch.py
+
+# 仿真完整启动：仿真环境 + 键盘遥控 + 轨迹回放
+ros2 launch hex_ros_arm_replay sim_traj.launch.py viewer:=true rviz:=true
+``` 
 > 请确保你的param参数设置无误
+> 轨迹 JSON 文件可通过录制脚本生成。
 
 键盘控制：
 
 - **`s`** — 开始轨迹回放
 - **`q`** — 停止回放并归位
 
-> 轨迹 JSON 文件可通过录制脚本生成。
 
 ### 5. 使用脚本
 
@@ -185,10 +199,59 @@ ros2 run hex_ros_arm_replay arm_replay --ros-args -p waypoints_path:={/path/to}/
 连接真机控制器后运行：
 
 ```shell
-python3 script/arm_record.py --mode record --ctrl-rate 1000 --samp-rate 100
+python3 script/arm_record.py --ip <robot_ip> --port <robot_port> --output <output_path> \
+    --mode record --ctrl-rate 1000 --samp-rate 100
 ```
+
+**必选参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `--ip` | str | 机器人控制器 IP 地址 |
+| `--port` | int | 机器人控制器端口 |
+| `--output` | str | 轨迹 JSON 输出文件路径 |
+
+**可选参数：**
+
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| `--mode` | `record` | `record`（键盘触发录制）或 `stream`（连续流式录制） |
+| `--ctrl-rate` | 1000 | 控制循环频率 [Hz] |
+| `--samp-rate` | 100 | 采样频率 [Hz] |
 
 录制模式说明：
 
-- **`record` 模式（默认）：** 按 `r` 记录当前关节位置，按 `c` 清空所有记录点。输出文件为 `jsons/trajectory.json`。
-- **`stream` 模式：** 逐帧连续记录，无需按键触发。
+- **`record` 模式（默认）：** 按 `r` 记录当前关节位置，按 `c` 清空所有记录点。输出文件由 `--output` 指定。
+- **`stream` 模式：** 逐帧连续记录，无需按键触发。输出文件由 `--output` 指定。
+
+### 6. 轨迹 JSON 文件格式
+
+录制脚本输出的 JSON 文件格式如下，该格式由 `PointLoader`（回放节点）加载解析：
+
+```json
+{
+  "info": {
+    "start_time_ns": 0,
+    "end_time_ns": 29797817037,
+    "total_points": 2973,
+    "dof": 6
+  },
+  "point": {
+    "1": {"ts_ns": 0, "jnt": [-0.037, -1.573, 3.118, 0.028, -0.052, 0.129]},
+    "2": {"ts_ns": 87882924, "jnt": [-0.037, -1.573, 3.118, 0.028, -0.052, 0.129]},
+    ...
+  }
+}
+```
+
+| 路径 | 类型 | 说明 |
+|------|------|------|
+| `info.start_time_ns` | int | 起点时间戳 |
+| `info.end_time_ns` | int | 末点时间戳  |
+| `info.total_points` | int | 轨迹点总数 |
+| `info.dof` | int | 关节自由度|
+| `point.<N>.ts_ns` | int | 该点相对时间戳 [ns]，以首点为 0 基准 |
+| `point.<N>.jnt` | float[6] | 6 个关节位置 [rad]（小数位 2~3 位）|
+
+说明：
+- 回放时节点会将 `ts_ns` 转化为相对秒数作为时间基准进行线性插值。

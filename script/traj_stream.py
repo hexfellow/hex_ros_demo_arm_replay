@@ -2,32 +2,12 @@
 import json
 import os
 
-# 脚本所在目录的绝对路径，作为输出目录的基准
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class TrajStream:
-    """连续轨迹记录器
-
-    逐帧追加写入文件，不占用内存，支持长时间连续录制。
-    控制频率由外部控制循环决定。
-
-    使用方式:
-        stream = TrajStream()
-        stream.start(samp_hz=100)
-
-        while robot.is_working():
-            rate.sleep()
-            stream.record(robot)
-
-        stream.stop()
-    """
-
     def __init__(self, dec=2):
-        """
-        Args:
-            dec: 小数精度
-        """
+
         self._dec = dec
         self._f = None
         self._seq = 0
@@ -40,12 +20,10 @@ class TrajStream:
 
     @staticmethod
     def _ts_to_ns(stamp) -> int:
-        """将 HexDcBaseTime 转换为纳秒"""
         return int(stamp.secs * 1_000_000_000 + stamp.nsecs)
 
     @staticmethod
     def _ffmt(val: int, width: int) -> bytes:
-        """固定宽度格式化，用于原地更新 info 头部"""
         return str(val).rjust(width).encode()
 
     # ------------------------------------------------------------------
@@ -53,12 +31,7 @@ class TrajStream:
     # ------------------------------------------------------------------
 
     def start(self, output_path=os.path.join(SCRIPT_DIR, "trajectory.json"), samp_hz=None):
-        """开始记录（新建文件 + 写 JSON 头部）
 
-        Args:
-            output_path: 输出文件路径
-            samp_hz: 采样时间，由外部控制循环决定，写入 JSON metadata
-        """
         self._seq = 0
         self._last_abs_ns = None
         self._rel_ns = 0
@@ -88,11 +61,7 @@ class TrajStream:
         print(f"[TrajStream] Recording to {output_path}")
 
     def record(self, robot):
-        """记录当前帧的机械臂状态，追加到文件
 
-        Args:
-            robot: HexRobotArcherY6 实例
-        """
         state = robot.get_arm_state()
         if state is None:
             return
@@ -100,7 +69,6 @@ class TrajStream:
         ts_ns = self._ts_to_ns(state.header.stamp)
         dec = self._dec
 
-        # 纯计算，不碰状态
         if self._last_abs_ns is None:
             new_rel_ns = 0  # 首点 = 0
         else:
@@ -112,7 +80,6 @@ class TrajStream:
             "jnt": [round(float(v), dec) for v in state.arm_state.jnt.position],
         }
 
-        # I/O —— 失败则 return
         try:
             line = json.dumps(point, ensure_ascii=False)
             self._f.write(f'    "{idx}": {line},\n'.encode())
@@ -121,20 +88,17 @@ class TrajStream:
             print(f"\033[33m[TrajStream] Write error: {e}\033[0m")
             return
 
-        # I/O 成功后才 commit 状态
         self._last_abs_ns = ts_ns
         self._rel_ns = new_rel_ns
         self._seq += 1
 
     def stop(self):
-        """结束记录：去掉末尾逗号、闭合 JSON、修正 info 头部"""
         if self._f is None:
             return self._output_path
         fp = self._f
 
-        # 1. 去掉最后一个逗号，闭合 JSON
         try:
-            fp.seek(-2, os.SEEK_END)      # 回退到 ",\n"
+            fp.seek(-2, os.SEEK_END)     
             fp.truncate()
             fp.write(b'\n  }\n}\n')
         except OSError as e:
@@ -145,7 +109,6 @@ class TrajStream:
             print(f"\033[33m[TrajStream] stop close error: {e}\033[0m")
         self._f = None
 
-        # 2. 原地修正 info 头部中的元数据（固定宽度覆盖）
         try:
             with open(self._output_path, "r+b") as f:
                 f.seek(self._info_anchor_start)
