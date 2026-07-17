@@ -91,7 +91,6 @@ class DataInterface(InterfaceBase):
         self.__node.declare_parameter('lim_acc', [10.0, 10.0, 10.0, 10.0, 10.0, 10.0])
         self.__node.declare_parameter('jnt_eff', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         ### trajectory parameters: task config
-        self.__node.declare_parameter('init_position', [0.0, -1.5, 3.0, 0.0, 0.0, 0.0])
         self.__node.declare_parameter('end_position', [0.0, -1.5, 3.0, 0.0, 0.0, 0.0])
         self.__node.declare_parameter('expected_time', 10.0)
         self.__node.declare_parameter('loop', True)
@@ -101,10 +100,8 @@ class DataInterface(InterfaceBase):
             "lim_vel": list(self.__node.get_parameter('lim_vel').value),
             "lim_acc": list(self.__node.get_parameter('lim_acc').value),
             "jnt_eff": list(self.__node.get_parameter('jnt_eff').value),
-            "init_position": list(self.__node.get_parameter('init_position').value),
             "end_position": list(self.__node.get_parameter('end_position').value),
             "expected_time": float(self.__node.get_parameter('expected_time').value),
-            "loop": bool(self.__node.get_parameter('loop').value),
             "waypoints_path": self.__node.get_parameter('waypoints_path').value or "",
         }
 

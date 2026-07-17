@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 ################################################################
-# Copyright 2026 Dong Zhaorui. All rights reserved.
-# Author: Dong Zhaorui 847235539@qq.com
-# Date  : 2026-06-30
+# Copyright 2026 taigong26. All rights reserved.
+# Author: taigong26 thetaigon@qq.com
+# Date  : 2026-07-15
 ################################################################
+
 
 import os
 import sys
@@ -14,12 +15,11 @@ import threading
 from typing import Optional
 
 import numpy as np
-import pexpect
 
-from ament_index_python.packages import get_package_share_directory
+# from ament_index_python.packages import get_package_share_directory
 
-scrpit_path = os.path.abspath(os.path.dirname(__file__))
-sys.path.append(scrpit_path)
+# scrpit_path = os.path.abspath(os.path.dirname(__file__))
+# sys.path.append(scrpit_path)
 from replay_util import DataInterface
 
 from hex_util_msg.dataclass.dataclass_base import (
@@ -96,25 +96,12 @@ class ArmReplay:
 
             # Determine config path
             if waypoints_path:
-                config_path = waypoints_path
-                self.__data_interface.logi(
-                    f"Loading waypoints from {waypoints_path}")
+                self.__data_interface.logi(f"[init mode]: get path : {waypoints_path}")
             else:
-                # Fall back to package share default
-                pkg_share = get_package_share_directory('hex_ros_arm_replay')
-                config_path = os.path.join(pkg_share, 'jsons', 'trajectory.json')
-                self.__data_interface.logi(
-                    f"Loading waypoints from <ros package>/jsons/ ")
-
-            self.__data_interface.logd(f"[init mode]: get path : {config_path}")
-
-            # Check path existence
-            if not os.path.exists(config_path):
-                self.__data_interface.logw(
-                    f"waypoints file not found: {config_path}")
+                self.__data_interface.loge(f"[init mode]: Dont get waypoints path ")
                 sys.exit(1)
 
-            config_loader = TaskConfigLoader(config_path=config_path)
+            config_loader = TaskConfigLoader(config_path=waypoints_path)
             waypoints = config_loader.get_waypoints()
             ts_list = config_loader.get_timestamps()
 

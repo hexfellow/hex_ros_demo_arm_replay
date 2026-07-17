@@ -6,13 +6,6 @@ import numpy as np
 from hex_util_runtime import ns_now, HexRate
 import sys
 
-# If you want to use the local version of the library, you can uncomment the following lines.
-PROJECT_PATH = '/home/hexfellow/ttg/hexfellow/hex_driver_robot'
-sys.path.insert(1, f'{PROJECT_PATH}')
-sys.path.insert(
-    1,
-    f'{PROJECT_PATH}/hex_driver_robot/tcp_base/generated')
-
 from hex_driver_robot import HexRobotArcherY6, HexRobotArcherY6Params
 from hex_util_msg.dataclass import HexDcBaseVector3
 
