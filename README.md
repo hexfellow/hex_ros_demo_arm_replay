@@ -19,7 +19,7 @@ This is the **trajectory demo package** for **HEXFELLOW** robot arms, consisting
 Two main features:
 
 - **Trajectory Recording** — Recording scripts under `script/` connect to the real robot controller and record joint trajectories via drag teaching, outputting waypoints as JSON. Two recording modes: keyboard-triggered (`arm_record.py --mode record`, press `r` to record) and continuous streaming (`arm_record.py --mode stream`, frame-by-frame recording).
-- **Trajectory Replay** — The `arm_replay` node loads a trajectory from a JSON waypoints file and drives the arm along the recorded path via linear interpolation. Keyboard controls (`s` to start replay, `q` to stop and return home).
+- **Trajectory Replay** — The `arm_replay` node loads a trajectory from a JSON waypoints file and drives the arm along the recorded path via linear interpolation. On startup, the arm first moves to the first waypoint and waits for a keyboard command. Press **`s`** to execute one full replay cycle; upon completion the arm holds at the final position. Press **`q`** at any time to return to the home position (configured via the `end_position` parameter).
 
 Supports both **ROS 1** and **ROS 2**.
 
