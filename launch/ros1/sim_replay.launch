@@ -20,6 +20,6 @@
     <!-- keyboard teleop -->
     <include file="$(find hex_ros_teleop_keyboard)/launch/ros1/teleop_keyboard.launch"/>
 
-    <!-- gravity compensation node -->
-    <include file="$(find hex_ros_arm_traj_demo)/launch/ros1/arm_comp.launch"/>
+    <!-- arm replay node -->
+    <include file="$(find hex_ros_arm_replay)/launch/ros1/arm_replay.launch"/>
 </launch>

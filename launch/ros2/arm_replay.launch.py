@@ -14,23 +14,23 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
-    comp_pkg_path = FindPackageShare('hex_ros_arm_traj_demo')
+    traj_pkg_path = FindPackageShare('hex_ros_arm_replay')
     urdf_pkg_path = FindPackageShare('hex_ros_urdf_archer_y6')
 
-    # arm_comp node
-    comp_param_path = PathJoinSubstitution(
-        [comp_pkg_path, "config", "ros2", "params.yaml"])
+    # arm_replay node
+    traj_param_path = PathJoinSubstitution(
+        [traj_pkg_path, "config", "ros2", "replay_param.yaml"])
     urdf_file_path = PathJoinSubstitution(
         [urdf_pkg_path, "urdf", "gr100_comp.urdf"])
 
-    arm_comp_node = Node(
-        package='hex_ros_arm_traj_demo',
-        executable='arm_traj',
-        name='arm_comp',
+    arm_replay_node = Node(
+        package='hex_ros_arm_replay',
+        executable='arm_replay',
+        name='arm_replay',
         output="screen",
         emulate_tty=True,
         parameters=[
-            comp_param_path,
+            traj_param_path,
             {
                 "model_urdf": ParameterValue(urdf_file_path, value_type=str),
                 "use_sim_time": True,
@@ -44,5 +44,5 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        arm_comp_node,
+        arm_replay_node,
     ])

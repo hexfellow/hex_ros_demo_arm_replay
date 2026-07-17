@@ -12,6 +12,6 @@
     <!-- real arm driver (archer y6) -->
     <include file="$(find hex_ros_robot_arm)/launch/ros1/archer.launch"/>
 
-    <!-- gravity compensation node -->
-    <include file="$(find hex_ros_arm_comp)/launch/ros1/arm_comp.launch"/>
+    <!-- arm replay node -->
+    <include file="$(find hex_ros_arm_replay)/launch/ros1/arm_replay.launch"/>
 </launch>

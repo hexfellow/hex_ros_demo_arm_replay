@@ -3,7 +3,7 @@
 ################################################################
 # Copyright 2026 Dong Zhaorui. All rights reserved.
 # Author: Dong Zhaorui 847235539@qq.com
-# Date  : 2026-06-30
+# Date  : 2026-07-17
 ################################################################
 
 import time
@@ -53,7 +53,8 @@ class DataInterface(InterfaceBase):
 
         ### ros node
         rospy.init_node(name, anonymous=True)
-        self._rate_param["ros"] = rospy.get_param('~rate_ros', 500.0)
+        self._rate_param["ros"] = rospy.get_param('~rate_ros', 1000.0)
+        self._rate_param["traj"] = rospy.get_param('~rate_traj', 500.0)
         self.__rate = rospy.Rate(self._rate_param["ros"])
 
         ### parameters
@@ -61,38 +62,30 @@ class DataInterface(InterfaceBase):
             "teleop": rospy.get_param('~rate_teleop', 100.0),
         })
         self._model_param = {
-            "urdf":
-            rospy.get_param('~model_urdf', ""),
-            "frame_id":
-            rospy.get_param('~model_frame_id', "base_link"),
-            "pose_end_in_flange":
-            list(
+            "urdf": rospy.get_param('~model_urdf', ""),
+            "frame_id": rospy.get_param('~model_frame_id', "base_link"),
+            "pose_end_in_flange": list(
                 rospy.get_param('~pose_end_in_flange',
                                 [0.187, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0])),
         }
-        self._comp_param = {
-            "gravity":
-            list(rospy.get_param('~gravity', [0.0, 0.0, -9.81])),
-            "arm_stable_pos":
-            list(
-                rospy.get_param('~arm_stable_pos',
-                                [0.0, -1.5, 3.0, 0.07, 0.0, 0.0])),
-            "grip_stable_pos":
-            list(rospy.get_param('~grip_stable_pos', [0.5])),
-            "arm_kp":
-            list(
-                rospy.get_param('~arm_kp',
-                                [200.0, 200.0, 250.0, 150.0, 100.0, 100.0])),
-            "arm_kd":
-            list(rospy.get_param('~arm_kd', [5.0, 5.0, 5.0, 5.0, 2.0, 2.0])),
-            "grip_kp":
-            list(rospy.get_param('~grip_kp', [10.0])),
-            "grip_kd":
-            list(rospy.get_param('~grip_kd', [0.5])),
-            "arrive_threshold":
-            rospy.get_param('~arrive_threshold', 0.06),
-            "extra_mass":
-            rospy.get_param('~extra_mass', 0.1),
+
+        ### trajectory parameters: arm config
+        self._traj_param = {
+            "lim_vel": list(
+                rospy.get_param('~lim_vel',
+                                [10.0, 10.0, 10.0, 10.0, 10.0, 10.0])),
+            "lim_acc": list(
+                rospy.get_param('~lim_acc',
+                                [10.0, 10.0, 10.0, 10.0, 10.0, 10.0])),
+            "jnt_eff": list(
+                rospy.get_param('~jnt_eff',
+                                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])),
+            ### trajectory parameters: task config
+            "end_position": list(
+                rospy.get_param('~end_position',
+                                [0.0, -1.5, 3.0, 0.0, 0.0, 0.0])),
+            "expected_time": float(rospy.get_param('~expected_time', 10.0)),
+            "waypoints_path": rospy.get_param('~waypoints_path', '') or "",
         }
 
         ### publisher
@@ -145,6 +138,12 @@ class DataInterface(InterfaceBase):
 
     def logf(self, msg, *args, **kwargs):
         rospy.logfatal(msg, *args, **kwargs)
+
+    ####################
+    ### trajectory parameters
+    ####################
+    def get_traj_param(self) -> dict:
+        return self._traj_param
 
     ####################
     ### publishers
