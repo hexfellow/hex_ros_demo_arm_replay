@@ -1,10 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding:utf-8 -*-
-################################################################
-# Copyright 2026 Dong Zhaorui. All rights reserved.
-# Author: Dong Zhaorui 847235539@qq.com
-# Date  : 2026-03-26
-################################################################
 
 import argparse
 import time
@@ -23,8 +16,8 @@ sys.path.insert(
 from hex_driver_robot import HexRobotArcherY6, HexRobotArcherY6Params
 from hex_util_msg.dataclass import HexDcBaseVector3
 
-from traj_recorder import TrajRecorder
-from traj_stream import TrajStream
+from replay_recorder import TrajRecorder
+from replay_stream import TrajStream
 
 def _stamp_to_ns(stamp) -> int:
     """Convert HexDcBaseTime stamp to nanoseconds."""
@@ -84,7 +77,7 @@ def main() -> None:
 
         if mode == "stream":
             stream = TrajStream(dec=3)
-            stream.start(samp_hz=1/samp_rate)
+            stream.start(samp_hz=samp_rate)
             print("[Mode] light-weight streaming")
 
         cnt = 0
@@ -130,13 +123,11 @@ def main() -> None:
             robot.stop()
             print("robot stopped cleanly")
         if mode == "record":
-            try:
-                if recorder is not None:
-                    recorder.save()
-            except Exception as e:
-                print(f"\033[33m[Recorder] save error: {e}\033[0m")
             if recorder is not None:
-                recorder.stop()
+                try:
+                    recorder.stop()
+                except Exception as e:
+                    print(f"\033[33m[Recorder] stop error: {e}\033[0m")
         if mode == "stream":
             try:
                 if stream is not None:

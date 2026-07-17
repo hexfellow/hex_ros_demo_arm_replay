@@ -20,7 +20,7 @@ from ament_index_python.packages import get_package_share_directory
 
 scrpit_path = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(scrpit_path)
-from traj_util import DataInterface
+from replay_util import DataInterface
 
 from hex_util_msg.dataclass.dataclass_base import (
     HexDcBaseVector3,
@@ -38,7 +38,6 @@ from hex_util_msg.dataclass.dataclass_robo import (
 
 from PointLoader import TaskConfigLoader
 from .TrajectoryController import (
-    TrajectoryControllerBase,
     TrajectoryPlanner,
     Move2TargetPlanner,
 )
@@ -46,11 +45,11 @@ from .TrajectoryController import (
 ARM_DOF = 6
 GRIP_DOF = 1
 
-class ArmComp:
+class ArmReplay:
 
     def __init__(self):
         ### utility
-        self.__data_interface = DataInterface("arm_traj")
+        self.__data_interface = DataInterface("arm_replay")
 
         ### parameters
         self.__rate_param = self.__data_interface.get_rate_param()
@@ -70,9 +69,6 @@ class ArmComp:
         )
 
         ### control presets for JNT mode commands
-        self.__arm_stable_pos = np.asarray(
-            self.__traj_param["init_position"], dtype=np.float64)
-        self.__grip_stable_pos = np.zeros(GRIP_DOF, dtype=np.float64)
         self.__arm_lim_vel = np.asarray(
             self.__traj_param["lim_vel"], dtype=np.float64)
         self.__arm_lim_acc = np.asarray(
@@ -80,6 +76,9 @@ class ArmComp:
         self.__arm_jnt_eff = np.asarray(
             self.__traj_param["jnt_eff"], dtype=np.float64)
         self.__arrive_threshold = 0.1
+        
+        
+        self.__grip_stable_pos = np.zeros(GRIP_DOF, dtype=np.float64)
 
         ### threads
         self.__stop_event = threading.Event()
@@ -90,36 +89,51 @@ class ArmComp:
         ### mod
         self.__init_mode()
     
-    
     def __init_mode(self):
         try:
-            
-            # Load waypoints from JSON
-            pkg_share = get_package_share_directory('hex_ros_arm_traj_demo')
-            config_path = os.path.join(pkg_share, 'jsons', 'trajectory.json')
-            
+            # Read waypoints_path from parameters
+            waypoints_path = self.__traj_param.get("waypoints_path", "")
+
+            # Determine config path
+            if waypoints_path:
+                config_path = waypoints_path
+                self.__data_interface.logi(
+                    f"Loading waypoints from {waypoints_path}")
+            else:
+                # Fall back to package share default
+                pkg_share = get_package_share_directory('hex_ros_arm_traj_demo')
+                config_path = os.path.join(pkg_share, 'jsons', 'trajectory.json')
+                self.__data_interface.logi(
+                    f"Loading waypoints from <ros package>/jsons/ ")
+
             self.__data_interface.logd(f"[init mode]: get path : {config_path}")
-            
+
+            # Check path existence
+            if not os.path.exists(config_path):
+                self.__data_interface.logw(
+                    f"waypoints file not found: {config_path}")
+                sys.exit(1)
+
             config_loader = TaskConfigLoader(config_path=config_path)
             waypoints = config_loader.get_waypoints()
             ts_list = config_loader.get_timestamps()
 
             # Create the trajectory player
-
-            self.__traj_player: Optional[TrajectoryControllerBase] = \
+            self.__traj_player: Optional[TrajectoryPlanner] = \
                 TrajectoryPlanner(
                     waypoints=waypoints,
                     timestamps=ts_list,
                 )
             self.__data_interface.logi(
-                f"[arm_traj]: TrajectoryPlanner, "
+                f"TrajectoryPlanner, "
                 f"{len(waypoints)} waypoints, "
                 f"duration={ts_list[-1]:.3f}s, "
                 f"interpolate=Linear")
 
         except Exception as e:
-            # traceback.print_exc()
-            self.__data_interface.loge(f"[arm_traj]: init mod err,  {e} \n")
+            traceback.print_exc()
+            self.__data_interface.loge(f"init mod err,  {e} \n")
+            sys.exit(1)
             
     def __is_running(self):
         return self.__data_interface.ok() and not self.__stop_event.is_set()
@@ -132,7 +146,7 @@ class ArmComp:
         self.__start_event.clear()
         self.__teleop_thread.start()
         self.__init_process()
-        self.__data_interface.logi("[arm_comp]: start work")
+        self.__data_interface.logi("start work")
 
     def run(self):
         try:
@@ -197,23 +211,32 @@ class ArmComp:
     # Smooth motion helpers
     ##############################################################
     def __move_first_target(self):
-        """平滑移动到 waypoints[0]，时长用 expected_time"""
-        if self.__traj_player is None or not self.__traj_player.waypoints:
-            self.__data_interface.logw("[arm_traj]: no waypoints, skip move_first_target")
+        """move to waypoints[0]"""
+        if self.__traj_player is None:
+            self.__data_interface.logw("no waypoints, skip move_first_target")
             return
+        
+        waypoint0 = np.asarray(self.__traj_player.get_first_point(), dtype=np.float64)
+        self.__data_interface.logi(f"moving to waypoint[0]: {waypoint0}")
 
-        waypoint0 = np.asarray(self.__traj_player.waypoints[0], dtype=np.float64)
-        self.__data_interface.logi(f"[arm_traj]: moving to waypoint[0]: {waypoint0}")
-
-        state = self.__data_interface.get_manip_state(latest=True)
-        if state is None:
-            self.__data_interface.loge("[arm_traj]: no manip state, skip move_first_target")
-            return
+        state = None
+        _timeout = time.time() + 5
+        while state is None:
+            try:
+                state = self.__data_interface.get_manip_state(latest=True)
+            except Exception:
+                state = None
+                
+            self.__data_interface.sleep()
+            if time.time() > _timeout:
+                self.__data_interface.loge("no manip state, skip move_first_target")
+                return
+        
         current_pos = np.asarray(
             state.manip_state.arm_state.jnt.position, dtype=np.float64)
 
         if np.allclose(current_pos, waypoint0, atol=self.__arrive_threshold):
-            self.__data_interface.logi("[arm_traj]: already at waypoint[0]")
+            self.__data_interface.logi("already at waypoint[0]")
             return
 
         planner = Move2TargetPlanner(
@@ -235,11 +258,11 @@ class ArmComp:
                     break
             self.__data_interface.sleep()
 
-        self.__data_interface.logi("[arm_traj]: reached waypoint[0]")
+        self.__data_interface.logi("reached waypoint[0]")
 
     def __return_to_home(self):
-        """平滑回到 end_position，优先用 planner 最后指令位置"""
-        self.__data_interface.logi("[arm_traj]: returning to home")
+        """return home"""
+        self.__data_interface.logi("returning to home")
 
         home_pos = np.asarray(self.__traj_param["end_position"], dtype=np.float64)
 
@@ -252,13 +275,13 @@ class ArmComp:
         if start_pos is None:
             state = self.__data_interface.get_manip_state(latest=True)
             if state is None:
-                self.__data_interface.logw("[arm_traj]: cannot get start pos, skip")
+                self.__data_interface.logw("cannot get start pos, skip")
                 return
             start_pos = np.asarray(
                 state.manip_state.arm_state.jnt.position, dtype=np.float64)
 
         if np.allclose(start_pos, home_pos, atol=self.__arrive_threshold):
-            self.__data_interface.logi("[arm_traj]: already at home")
+            self.__data_interface.logi("already at home")
             return
 
         planner = Move2TargetPlanner(
@@ -277,7 +300,7 @@ class ArmComp:
                 ctrl = self.__build_traj_ctrl(target_pos)
                 self.__data_interface.pub_manip_ctrl(ctrl)
                 if done:
-                    self.__data_interface.logi("[arm_traj]: reached home")
+                    self.__data_interface.logi("reached home")
                     break
             self.__data_interface.sleep()
 
@@ -296,7 +319,7 @@ class ArmComp:
 
             curr_q = bool(keys.key_q)
             if curr_q and not prev_q:
-                self.__data_interface.logi("[arm_comp]: stop and exit")
+                self.__data_interface.logi("stop and exit")
                 self.__stop_event.set()
             prev_q = curr_q
 
@@ -312,7 +335,7 @@ class ArmComp:
             if not self.__is_running():
                 return
 
-            self.__data_interface.logi("[arm_traj]: press 's' to start work...")
+            self.__data_interface.logi("press 's' to start work...")
             while self.__is_running() and not self.__start_event.is_set():
                 self.__data_interface.sleep()
 
@@ -320,27 +343,30 @@ class ArmComp:
                 return
 
         except Exception as e:
-            self.__data_interface.loge(f"[arm_traj]: init process err,  {e} \n")
+            self.__data_interface.loge(f"init process err,  {e} \n")
             # traceback.print_exc()
 
     def __exit_process(self):
         try:
+            
             self.__return_to_home()
-        except Exception:
+        except Exception as e:
             # traceback.print_exc()
-            self.__data_interface.loge(f"[arm_traj]: init process err,  {e} \n")
+            self.__data_interface.loge(f"init process err,  {e} \n")
 
     def __work_process(self):
-        self.__data_interface.logi("[arm traj]: start play")
+        self.__data_interface.logi("start play")
 
         if self.__traj_player is None:
-            self.__data_interface.loge("[arm traj]: no trajectory player")
+            self.__data_interface.loge("no trajectory player")
             return
 
         if not self.__traj_player.start_trajectory():
-            self.__data_interface.loge("[arm traj]: failed to start trajectory")
+            self.__data_interface.loge("failed to start trajectory")
             return
 
+        _send_exit_msg = False
+        
         traj_count = 0
         while self.__is_running():
             try: 
@@ -355,14 +381,23 @@ class ArmComp:
                         self.__data_interface.logd(f"pos: {target_pos[1]}")
                         
                 self.__data_interface.sleep()
+                
+                
+                # ## exit
+                _done = self.__traj_player.is_done()
+                if _done and not _send_exit_msg:
+                    self.__data_interface.logi("Task finished, press 'q' to Return Home...")
+                    _send_exit_msg = True
+                
             except Exception:
                 traceback.print_exc()
-
+        
+        
 def main():
-    arm_comp = ArmComp()
+    arm_replay = ArmReplay()
     try:
-        arm_comp.start()
-        arm_comp.run()
+        arm_replay.start()
+        arm_replay.run()
     except KeyboardInterrupt:
         pass
 

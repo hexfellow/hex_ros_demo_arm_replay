@@ -17,16 +17,16 @@ def generate_launch_description():
     traj_pkg_path = FindPackageShare('hex_ros_arm_traj_demo')
     urdf_pkg_path = FindPackageShare('hex_ros_urdf_archer_y6')
 
-    # arm_traj node
+    # arm_replay node
     traj_param_path = PathJoinSubstitution(
-        [traj_pkg_path, "config", "ros2", "traj_param.yaml"])
+        [traj_pkg_path, "config", "ros2", "replay_param.yaml"])
     urdf_file_path = PathJoinSubstitution(
         [urdf_pkg_path, "urdf", "gr100_comp.urdf"])
 
-    arm_traj_node = Node(
+    arm_replay_node = Node(
         package='hex_ros_arm_traj_demo',
-        executable='arm_traj',
-        name='arm_traj',
+        executable='arm_replay',
+        name='arm_replay',
         output="screen",
         emulate_tty=True,
         parameters=[
@@ -44,5 +44,5 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        arm_traj_node,
+        arm_replay_node,
     ])

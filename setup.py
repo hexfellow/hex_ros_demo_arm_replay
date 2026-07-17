@@ -39,7 +39,7 @@ setup(
     license='Apache-2.0',
     entry_points={
         'console_scripts': [
-            'arm_traj = hex_ros_arm_traj_demo.arm_traj:main',
+            'arm_replay = hex_ros_arm_traj_demo.arm_replay:main',
         ],
     },
 )

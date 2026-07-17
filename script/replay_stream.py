@@ -1,10 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding:utf-8 -*-
-################################################################
-# Copyright 2026 Dong Zhaorui. All rights reserved.
-# Author: Dong Zhaorui 847235539@qq.com
-# Date  : 2026-07-15
-################################################################
 
 import json
 import os
@@ -21,7 +14,7 @@ class TrajStream:
 
     使用方式:
         stream = TrajStream()
-        stream.start(samp_hz=500)
+        stream.start(samp_hz=100)
 
         while robot.is_working():
             rate.sleep()
@@ -38,11 +31,11 @@ class TrajStream:
         self._dec = dec
         self._f = None
         self._seq = 0
-        self._start_ns = None
-        self._last_ns = None
+        self._last_abs_ns = None
+        self._rel_ns = 0
 
     # ------------------------------------------------------------------
-    # 工具
+    # tools
     # ------------------------------------------------------------------
 
     @staticmethod
@@ -59,16 +52,16 @@ class TrajStream:
     # Public API
     # ------------------------------------------------------------------
 
-    def start(self, output_path=os.path.join(SCRIPT_DIR, "../jsons/trajectory.json"), samp_hz=None):
+    def start(self, output_path=os.path.join(SCRIPT_DIR, "trajectory.json"), samp_hz=None):
         """开始记录（新建文件 + 写 JSON 头部）
 
         Args:
             output_path: 输出文件路径
-            samp_hz: 采样频率 (Hz)，由外部控制循环决定，写入 JSON metadata
+            samp_hz: 采样时间，由外部控制循环决定，写入 JSON metadata
         """
         self._seq = 0
-        self._start_ns = None
-        self._last_ns = None
+        self._last_abs_ns = None
+        self._rel_ns = 0
         self._output_path = output_path
 
         self._f = open(output_path, "wb")
@@ -107,63 +100,62 @@ class TrajStream:
         ts_ns = self._ts_to_ns(state.header.stamp)
         dec = self._dec
 
-        if self._last_ns is None:
-            self._start_ns = ts_ns
-            dt_s = 0.0
+        # 纯计算，不碰状态
+        if self._last_abs_ns is None:
+            new_rel_ns = 0  # 首点 = 0
         else:
-            dt_s = round((ts_ns - self._last_ns) * 1e-9, dec)
-
-        pose = state.arm_state.pose
+            new_rel_ns = self._rel_ns + (ts_ns - self._last_abs_ns)  # 累加时间差
         idx = self._seq + 1  # 1-based 序号
 
         point = {
-            # "dt_s": dt_s,
-            "ts_ns": ts_ns,
+            "ts_ns": new_rel_ns,
             "jnt": [round(float(v), dec) for v in state.arm_state.jnt.position],
-            "pose": {
-                "position": [
-                    round(float(pose.position.x), dec),
-                    round(float(pose.position.y), dec),
-                    round(float(pose.position.z), dec),
-                ],
-                "orientation": [
-                    round(float(pose.orientation.w), dec),
-                    round(float(pose.orientation.x), dec),
-                    round(float(pose.orientation.y), dec),
-                    round(float(pose.orientation.z), dec),
-                ],
-            },
         }
 
-        # 单行追加 —— 纯 ASCII，seek 安全
-        line = json.dumps(point, ensure_ascii=False)
-        self._f.write(f'    "{idx}": {line},\n'.encode())
-        self._f.flush()
+        # I/O —— 失败则 return
+        try:
+            line = json.dumps(point, ensure_ascii=False)
+            self._f.write(f'    "{idx}": {line},\n'.encode())
+            self._f.flush()
+        except OSError as e:
+            print(f"\033[33m[TrajStream] Write error: {e}\033[0m")
+            return
 
+        # I/O 成功后才 commit 状态
+        self._last_abs_ns = ts_ns
+        self._rel_ns = new_rel_ns
         self._seq += 1
-        self._last_ns = ts_ns
 
     def stop(self):
         """结束记录：去掉末尾逗号、闭合 JSON、修正 info 头部"""
         if self._f is None:
-            return
+            return self._output_path
         fp = self._f
 
         # 1. 去掉最后一个逗号，闭合 JSON
-        fp.seek(-2, os.SEEK_END)      # 回退到 ",\n"
-        fp.truncate()
-        fp.write(b'\n  }\n}\n')
-        fp.close()
+        try:
+            fp.seek(-2, os.SEEK_END)      # 回退到 ",\n"
+            fp.truncate()
+            fp.write(b'\n  }\n}\n')
+        except OSError as e:
+            print(f"\033[33m[TrajStream] stop truncate/write error: {e}\033[0m")
+        try:
+            fp.close()
+        except OSError as e:
+            print(f"\033[33m[TrajStream] stop close error: {e}\033[0m")
         self._f = None
 
         # 2. 原地修正 info 头部中的元数据（固定宽度覆盖）
-        with open(self._output_path, "r+b") as f:
-            f.seek(self._info_anchor_start)
-            f.write(self._ffmt(self._start_ns or 0, 22))
-            f.seek(self._info_anchor_end)
-            f.write(self._ffmt(self._last_ns or 0, 22))
-            f.seek(self._info_anchor_total)
-            f.write(self._ffmt(self._seq, 12))
+        try:
+            with open(self._output_path, "r+b") as f:
+                f.seek(self._info_anchor_start)
+                f.write(self._ffmt(0, 22))
+                f.seek(self._info_anchor_end)
+                f.write(self._ffmt(self._rel_ns if self._rel_ns else 0, 22))
+                f.seek(self._info_anchor_total)
+                f.write(self._ffmt(self._seq if self._seq else 0, 12))
+        except OSError as e:
+            print(f"\033[33m[TrajStream] stop metadata error: {e}\033[0m")
 
         print(f"[TrajStream] Done: {self._seq} points -> {self._output_path}")
         return self._output_path

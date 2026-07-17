@@ -35,7 +35,7 @@ def generate_launch_description():
     # arm trajectory node
     traj_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            PathJoinSubstitution([traj_pkg_path, "arm_traj.launch.py"])), )
+            PathJoinSubstitution([traj_pkg_path, "arm_replay.launch.py"])), )
 
     return LaunchDescription([
         keyboard_launch,

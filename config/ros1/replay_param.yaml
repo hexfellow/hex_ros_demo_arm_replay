@@ -10,15 +10,16 @@ model_frame_id: "base_link"
 # end effector pose in flange frame [x, y, z, qw, qx, qy, qz]
 pose_end_in_flange: [0.187, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
 
-# arm trajectory config (from jnt_plan_cfg.json)
-arm_config.lim_vel: [10, 10, 10, 10, 10, 10]
-arm_config.lim_acc: [10, 10, 10, 10, 10, 10]
-arm_config.jnt_eff: [0, 0, 0, 0, 0, 0]
+### arm trajectory config (from jnt_plan_cfg.json)
+lim_vel: [10.0, 10.0, 10.0, 10.0, 10.0, 10.0]
+lim_acc: [10.0, 10.0, 10.0, 10.0, 10.0, 10.0]
+jnt_eff: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
-task_config.mode: "joint"
-task_config.init_position: [0, -1.5, 3.0, 0, 0, 0]
-task_config.end_position: [0, -1.5, 3.0, 0, 0, 0]
-task_config.expected_time: 10
+### task config
+mode: "joint"
+init_position: [0.0, -1.5, 3.0, 0.0, 0.0, 0.0]
+end_position: [0.0, -1.5, 3.0, 0.0, 0.0, 0.0]
+expected_time: 10.0
 
 # waypoints file path
 waypoints_path: ""
