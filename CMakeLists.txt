@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(hex_ros_arm_traj_demo)
+project(hex_ros_arm_replay)
 
 find_package(catkin REQUIRED)
 

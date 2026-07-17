@@ -101,7 +101,7 @@ class ArmReplay:
                     f"Loading waypoints from {waypoints_path}")
             else:
                 # Fall back to package share default
-                pkg_share = get_package_share_directory('hex_ros_arm_traj_demo')
+                pkg_share = get_package_share_directory('hex_ros_arm_replay')
                 config_path = os.path.join(pkg_share, 'jsons', 'trajectory.json')
                 self.__data_interface.logi(
                     f"Loading waypoints from <ros package>/jsons/ ")

@@ -6,9 +6,9 @@
 <!--#######################################-->
 
 <launch>
-    <node name="arm_replay" pkg="hex_ros_arm_traj_demo" type="arm_replay.py" output="screen">
+    <node name="arm_replay" pkg="hex_ros_arm_replay" type="arm_replay.py" output="screen">
         <!-- load default parameters -->
-        <rosparam file="$(find hex_ros_arm_traj_demo)/config/ros1/replay_param.yaml"/>
+        <rosparam file="$(find hex_ros_arm_replay)/config/ros1/replay_param.yaml"/>
         <!-- robot model used for dynamics -->
         <param name="model_urdf" value="$(find hex_ros_urdf_archer_y6)/urdf/gr100_comp.urdf"/>
         <!-- subscribe -->
