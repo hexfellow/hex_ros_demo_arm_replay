@@ -55,6 +55,22 @@ def main() -> None:
         required=True,
         help="Output file path for trajectory data",
     )
+    parser.add_argument(
+        "--robot-type",
+        type=str,
+        default="archer_y6",
+        choices=["archer_y6", "firefly_y6"],
+        help="Robot type name (e.g. archer_y6, firefly_y6)",
+    )
+    
+    parser.add_argument(
+        "--grip-type",
+        type=str,
+        default="empty",
+        choices=["empty", "gp80", "gr100", "gp100"],
+        help="Grip type (empty or gp100)",
+    )
+    
     args = parser.parse_args()
     mode = args.mode
     ctrl_rate = args.ctrl_rate
@@ -69,7 +85,7 @@ def main() -> None:
         ctrl_rate=500,
         state_buffer_size=200,
         sens_ts=False,
-        grip_type="empty",
+        grip_type=args.grip_type,
     )
     robot = None
     recorder = None
@@ -82,12 +98,20 @@ def main() -> None:
         rate = HexRate(ctrl_rate)
 
         if mode == "record":
-            recorder = TrajRecorder(args.output)
+            recorder = TrajRecorder(
+                args.output,
+                robot_type=args.robot_type,
+                gripper_type=params.grip_type,
+            )
             recorder.start()
             print("[Mode] full trajectory recording")
 
         if mode == "stream":
-            stream = TrajStream(dec=3)
+            stream = TrajStream(
+                dec=3,
+                robot_type=args.robot_type,
+                gripper_type=params.grip_type,
+            )
             stream.start(output_path=args.output, samp_hz=samp_rate)
             print("[Mode] light-weight streaming")
 
@@ -95,13 +119,7 @@ def main() -> None:
 
         while robot.is_working():
             rate.sleep()
-            if mode == "record":
-                assert recorder is not None
-                try:
-                    recorder.check_and_record(robot)
-                except Exception as e:
-                    print(f"\033[33m[Recorder] check_and_record error: {e}\033[0m")
-
+            
             robot.set_arm_mit_cmd({
                 "ts_ns": ns_now(),
                 "jnt_pos": np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
@@ -110,6 +128,16 @@ def main() -> None:
                 "mit_kp": np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
                 "mit_kd": np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
                 "grav": HexDcBaseVector3(0.0, 0.0, -9.8),
+            })
+
+            # 夹爪 MIT 阻抗补偿控制，录制期间保持夹爪位置
+            robot.set_grip_mit_cmd({
+                "ts_ns": ns_now(),
+                "jnt_pos": np.array([0.0]),
+                "jnt_vel": np.zeros(1),
+                "mit_tau": np.zeros(1),
+                "mit_kp": np.array([0.0]),
+                "mit_kd": np.array([0.0]),
             })
 
             cnt += 1
@@ -121,7 +149,14 @@ def main() -> None:
                         stream.record(robot)
                     except Exception as e:
                         print(f"\033[33m[TrajStream] record error: {e}\033[0m")
-
+            
+                if mode == "record":
+                    assert recorder is not None
+                    try:
+                        recorder.check_and_record(robot)
+                    except Exception as e:
+                        print(f"\033[33m[Recorder] check_and_record error: {e}\033[0m")
+            
 
     except KeyboardInterrupt:
         pass

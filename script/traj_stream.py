@@ -6,9 +6,11 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class TrajStream:
-    def __init__(self, dec=2):
+    def __init__(self, dec=2, robot_type="", gripper_type=""):
 
         self._dec = dec
+        self._robot_type = robot_type
+        self._gripper_type = gripper_type
         self._f = None
         self._seq = 0
         self._last_abs_ns = None
@@ -54,7 +56,9 @@ class TrajStream:
         self._f.write(b',\n')
         if samp_hz is not None:
             self._f.write(f'    "samp_hz": {samp_hz},\n'.encode())
-        self._f.write(b'    "dof": 6\n')
+        self._f.write(b'    "dof": 6,\n')
+        self._f.write(f'    "robot_type": "{self._robot_type}",\n'.encode())
+        self._f.write(f'    "gripper_type": "{self._gripper_type}"\n'.encode())
         self._f.write(b'  },\n')
         self._f.write(b'  "point": {\n')
         self._f.flush()
@@ -75,9 +79,24 @@ class TrajStream:
             new_rel_ns = self._rel_ns + (ts_ns - self._last_abs_ns)  # 累加时间差
         idx = self._seq + 1  # 1-based 序号
 
+        # 获取夹爪状态（兼容无夹爪的 robot 类型）
+        grip_pos = []
+        get_grip = getattr(robot, 'get_grip_state', None)
+        if get_grip is not None:
+            grip_state = robot.get_grip_state()
+            if grip_state is not None:
+                grip_pos = [round(float(v), dec)
+                            for v in grip_state.grip_state.jnt.position]
+            else:
+                print(f"\033[33m[TrajStream] Warning: robot type '{self._robot_type}' has no grip state available.\033[0m")
+        else:
+            print(f"\033[33m[TrajStream] Warning: robot type '{self._robot_type}' has no 'get_grip_state' method.\033[0m")
+        
+        
         point = {
             "ts_ns": new_rel_ns,
-            "jnt": [round(float(v), dec) for v in state.arm_state.jnt.position],
+            "arm": [round(float(v), dec) for v in state.arm_state.jnt.position],
+            "grip": grip_pos,
         }
 
         try:
