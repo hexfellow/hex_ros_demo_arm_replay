@@ -20,7 +20,7 @@ import numpy as np
 
 # scrpit_path = os.path.abspath(os.path.dirname(__file__))
 # sys.path.append(scrpit_path)
-from replay_util import DataInterface
+from .replay_util import DataInterface
 
 from hex_util_msg.dataclass.dataclass_base import (
     HexDcBaseVector3,
@@ -36,8 +36,8 @@ from hex_util_msg.dataclass.dataclass_robo import (
     HexDcRoboManipCtrl,
 )
 
-from PointLoader import TaskConfigLoader
-from TrajectoryController import (
+from .PointLoader import TaskConfigLoader
+from .TrajectoryController import (
     TrajectoryPlanner,
     Move2TargetPlanner,
 )
@@ -105,7 +105,7 @@ class ArmReplay:
             waypoints = config_loader.get_waypoints()
             ts_list = config_loader.get_timestamps()
 
-            # Create the trajectory player
+            # Create the arm trajectory player
             self.__traj_player: Optional[TrajectoryPlanner] = \
                 TrajectoryPlanner(
                     waypoints=waypoints,
@@ -116,6 +116,23 @@ class ArmReplay:
                 f"{len(waypoints)} waypoints, "
                 f"duration={ts_list[-1]:.3f}s, "
                 f"interpolate=Linear")
+
+            # Create the grip trajectory player if gripper data available
+            self.__grip_player: Optional[TrajectoryPlanner] = None
+            if config_loader.has_grip():
+                grip_waypoints = config_loader.get_grip_position()
+                self.__grip_player = TrajectoryPlanner(
+                    waypoints=grip_waypoints,
+                    timestamps=ts_list,
+                )
+                self.__data_interface.logi(
+                    f"GripTrajectoryPlanner, "
+                    f"{len(grip_waypoints)} waypoints, "
+                    f"gripper_type={config_loader.gripper_type}")
+            else:
+                self.__data_interface.logi(
+                    f"GripTrajectoryPlanner disabled "
+                    f"(gripper_type={config_loader.gripper_type})")
 
         except Exception as e:
             traceback.print_exc()
@@ -180,10 +197,21 @@ class ArmReplay:
             ),
             pose=self.__default_pose(),
         )
+
+        # Grip position: use trajectory interpolation if available
+        if self.__grip_player is not None:
+            grip_pos = self.__grip_player.get_target_position()
+            if grip_pos is not None:
+                grip_pos_val = grip_pos
+            else:
+                grip_pos_val = self.__grip_stable_pos
+        else:
+            grip_pos_val = self.__grip_stable_pos
+
         grip_ctrl = HexDcRoboGripCtrl(
             ctrl_mode=HexDcRoboGripCtrlMode.JNT,
             jnt=HexDcBaseJntFull(
-                pos=self.__grip_stable_pos.copy(),
+                pos=grip_pos_val.copy(),
                 vel=np.zeros(GRIP_DOF),
                 eff=np.ones(GRIP_DOF),
                 kp=np.zeros(GRIP_DOF),
@@ -319,31 +347,31 @@ class ArmReplay:
         try:
             self.__move_first_target()
 
-            if not self.__is_running():
-                return
-
-            self.__data_interface.logi("press 's' to start work...")
-            while self.__is_running() and not self.__start_event.is_set():
-                self.__data_interface.sleep()
-
-            if not self.__start_event.is_set():
-                return
-
         except Exception as e:
             self.__data_interface.loge(f"init process err,  {e} \n")
             # traceback.print_exc()
 
     def __exit_process(self):
         try:
-            
             self.__return_to_home()
         except Exception as e:
             # traceback.print_exc()
             self.__data_interface.loge(f"init process err,  {e} \n")
 
     def __work_process(self):
-        self.__data_interface.logi("start play")
+        
+        if not self.__is_running():
+            return
 
+        self.__data_interface.logi("press 's' to start work...")
+        while self.__is_running() and not self.__start_event.is_set():
+            self.__data_interface.sleep()
+
+        self.__data_interface.logi("start replay")
+
+        self.__replay_traj()
+
+    def __replay_traj(self):
         if self.__traj_player is None:
             self.__data_interface.loge("no trajectory player")
             return
@@ -351,6 +379,10 @@ class ArmReplay:
         if not self.__traj_player.start_trajectory():
             self.__data_interface.loge("failed to start trajectory")
             return
+
+        if self.__grip_player is not None:
+            self.__grip_player.start_trajectory()
+            self.__data_interface.logi("grip trajectory started")
 
         _send_exit_msg = False
         

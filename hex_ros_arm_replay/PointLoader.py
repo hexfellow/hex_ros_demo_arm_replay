@@ -34,11 +34,24 @@ class TaskConfigLoader:
         for i in range(1, self.info['total_points'] + 1):
             self.raw_points.append(data['point'][str(i)])
 
-        self.joint_waypoints = [p['jnt'] for p in self.raw_points]
-
+        self.joint_waypoints = [p['arm'] for p in self.raw_points]
+        self.gripper_type = data['info'].get('gripper_type', '')
+        self.grip_waypoints = [p.get('grip', []) for p in self.raw_points]
 
     def get_waypoints(self):
         return self.joint_waypoints.copy()
+
+    def get_grip_position(self) -> list:
+        """Return grip waypoints copy. Empty list if no gripper data."""
+        return self.grip_waypoints.copy()
+
+    def has_grip(self) -> bool:
+        """Double-check: valid gripper_type AND non-empty grip data."""
+        if not self.gripper_type or self.gripper_type == "empty":
+            return False
+        if not self.grip_waypoints:
+            return False
+        return len(self.grip_waypoints[0]) > 0
 
     def get_timestamps(self):
         """Return timestamps in seconds, relative to first point (ts[0]=0.0).

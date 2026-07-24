@@ -6,7 +6,13 @@ import numpy as np
 from hex_util_runtime import ns_now, HexRate
 import sys
 
-from hex_driver_robot import HexRobotArcherY6, HexRobotArcherY6Params
+from hex_driver_robot import (
+    HexRobotArcherY6, 
+    HexRobotArcherY6Params,
+    HexRobotFireflyY6,
+    HexRobotFireflyY6Params,
+
+)
 from hex_util_msg.dataclass import HexDcBaseVector3
 
 from traj_recorder import TrajRecorder
@@ -79,7 +85,12 @@ def main() -> None:
     # Compute sampling decimation: record once every N loop iterations
     sample_interval = max(1, round(ctrl_rate / samp_rate))
 
-    params = HexRobotArcherY6Params(
+    _ROBOT_MAP = {
+        "archer_y6": (HexRobotArcherY6Params, HexRobotArcherY6),
+        "firefly_y6": (HexRobotFireflyY6Params, HexRobotFireflyY6),
+    }
+    _params_cls, _robot_cls = _ROBOT_MAP[args.robot_type]
+    params = _params_cls(
         host=args.ip,
         port=args.port,
         ctrl_rate=500,
@@ -91,7 +102,7 @@ def main() -> None:
     recorder = None
     stream = None
     try:
-        robot = HexRobotArcherY6(params)
+        robot = _robot_cls(params)
         robot.start()
         print(f"dofs: {robot.get_dofs()}")
 
@@ -130,7 +141,6 @@ def main() -> None:
                 "grav": HexDcBaseVector3(0.0, 0.0, -9.8),
             })
 
-            # 夹爪 MIT 阻抗补偿控制，录制期间保持夹爪位置
             robot.set_grip_mit_cmd({
                 "ts_ns": ns_now(),
                 "jnt_pos": np.array([0.0]),
