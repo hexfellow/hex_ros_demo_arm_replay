@@ -16,7 +16,7 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     keyboard_pkg_path = FindPackageShare('hex_ros_teleop_keyboard')
     arm_pkg_path = FindPackageShare('hex_ros_robot_arm')
-    traj_pkg_path = FindPackageShare('hex_ros_arm_replay')
+    traj_pkg_path = FindPackageShare('hex_ros_demo_arm_replay')
 
     # args
 

@@ -1,4 +1,4 @@
-# hex_ros_arm_replay
+# hex_ros_demo_arm_replay
 **中文** | [English](README.md)
 
 ## 目录
@@ -28,14 +28,14 @@
 ## 2. 包架构
 
 ```
-hex_ros_arm_replay/
+hex_ros_demo_arm_replay/
 ├── config/                           # 参数配置
 │   ├── ros1/
 │   │   └── replay_param.yaml         #   ROS 1 参数
 │   └── ros2/
 │       └── replay_param.yaml         #   ROS 2 参数
 ├── launch/                           # ROS launch 启动文件
-├── hex_ros_arm_replay/               # 核心代码
+├── hex_ros_demo_arm_replay/               # 核心代码
 │   ├── arm_replay.py                 #   主节点：轨迹回放控制循环
 │   ├── PointLoader.py                #   轨迹 JSON 文件加载器
 │   ├── TrajectoryController.py       #   轨迹规划器（线性插值）
@@ -105,7 +105,7 @@ pip3 install 'hex-driver-robot>=0.1.0'
 
 ```shell
 git clone https://github.com/hexfellow/hex_ros_msgs.git
-git clone https://github.com/hexfellow/hex_ros_arm_replay.git
+git clone https://github.com/hexfellow/hex_ros_demo_arm_replay.git
 git clone https://github.com/hexfellow/hex_ros_robot_arm.git
 git clone https://github.com/hexfellow/sim_archer_y6.git
 git clone https://github.com/hexfellow/teleop_keyboard.git
@@ -126,7 +126,7 @@ cd <your_ws>/src
 
 ```shell
 git clone https://github.com/hexfellow/hex_ros_msgs.git
-git clone https://github.com/hexfellow/hex_ros_arm_replay.git
+git clone https://github.com/hexfellow/hex_ros_demo_arm_replay.git
 git clone https://github.com/hexfellow/hex_ros_robot_arm.git
 git clone https://github.com/hexfellow/sim_archer_y6.git
 git clone https://github.com/hexfellow/teleop_keyboard.git
@@ -162,26 +162,26 @@ arm_replay 提供多个 launch 文件，一键启动不同场景（轨迹 JSON �
 
 ```shell
 # 仅启动回放节点
-roslaunch hex_ros_arm_replay arm_replay.launch
+roslaunch hex_ros_demo_arm_replay arm_replay.launch
 
 # 真机完整启动：键盘遥控 + 机械臂驱动 + 轨迹回放
-roslaunch hex_ros_arm_replay real_replay.launch
+roslaunch hex_ros_demo_arm_replay real_replay.launch
 
 # 仿真完整启动：仿真环境 + 键盘遥控 + 轨迹回放
-roslaunch hex_ros_arm_replay sim_replay.launch viewer:=true rviz:=true
+roslaunch hex_ros_demo_arm_replay sim_replay.launch viewer:=true rviz:=true
 ```
 
 **ROS 2：**
 
 ```shell
 # 仅启动回放节点
-ros2 launch hex_ros_arm_replay arm_replay.launch.py
+ros2 launch hex_ros_demo_arm_replay arm_replay.launch.py
 
 # 真机完整启动：键盘遥控 + 机械臂驱动 + 轨迹回放
-ros2 launch hex_ros_arm_replay real_traj.launch.py
+ros2 launch hex_ros_demo_arm_replay real_traj.launch.py
 
 # 仿真完整启动：仿真环境 + 键盘遥控 + 轨迹回放
-ros2 launch hex_ros_arm_replay sim_traj.launch.py viewer:=true rviz:=true
+ros2 launch hex_ros_demo_arm_replay sim_traj.launch.py viewer:=true rviz:=true
 ``` 
 > 请确保你的param参数设置无误
 > 轨迹 JSON 文件可通过录制脚本生成。

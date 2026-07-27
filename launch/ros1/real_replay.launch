@@ -13,5 +13,5 @@
     <include file="$(find hex_ros_robot_arm)/launch/ros1/archer.launch"/>
 
     <!-- arm replay node -->
-    <include file="$(find hex_ros_arm_replay)/launch/ros1/arm_replay.launch"/>
+    <include file="$(find hex_ros_demo_arm_replay)/launch/ros1/arm_replay.launch"/>
 </launch>

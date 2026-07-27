@@ -2,7 +2,7 @@ import os
 from setuptools import setup, find_packages
 from glob import glob
 
-package_name = 'hex_ros_arm_replay'
+package_name = 'hex_ros_demo_arm_replay'
 
 
 def get_files(tar: str, src: str):
@@ -39,7 +39,7 @@ setup(
     license='Apache-2.0',
     entry_points={
         'console_scripts': [
-            'arm_replay = hex_ros_arm_replay.arm_replay:main',
+            'arm_replay = hex_ros_demo_arm_replay.arm_replay:main',
         ],
     },
 )

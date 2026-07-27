@@ -14,7 +14,7 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
-    traj_pkg_path = FindPackageShare('hex_ros_arm_replay')
+    traj_pkg_path = FindPackageShare('hex_ros_demo_arm_replay')
     urdf_pkg_path = FindPackageShare('hex_ros_urdf_archer_y6')
 
     # arm_replay node
@@ -24,7 +24,7 @@ def generate_launch_description():
         [urdf_pkg_path, "urdf", "gr100_comp.urdf"])
 
     arm_replay_node = Node(
-        package='hex_ros_arm_replay',
+        package='hex_ros_demo_arm_replay',
         executable='arm_replay',
         name='arm_replay',
         output="screen",
