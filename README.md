@@ -232,11 +232,13 @@ The JSON file produced by the recording scripts follows the format below, parsed
     "start_time_ns": 0,
     "end_time_ns": 29797817037,
     "total_points": 2973,
-    "dof": 6
+    "dof": 6,
+    "robot_type": "archer_y6",
+    "gripper_type": "empty"
   },
   "point": {
-    "1": {"ts_ns": 0, "jnt": [-0.037, -1.573, 3.118, 0.028, -0.052, 0.129]},
-    "2": {"ts_ns": 87882924, "jnt": [-0.037, -1.573, 3.118, 0.028, -0.052, 0.129]},
+    "1": {"ts_ns": 0, "jnt": [-0.037, -1.573, 3.118, 0.028, -0.052, 0.129], "grip": []},
+    "2": {"ts_ns": 87882924, "jnt": [-0.037, -1.573, 3.118, 0.028, -0.052, 0.129], "grip": []},
     ...
   }
 }
