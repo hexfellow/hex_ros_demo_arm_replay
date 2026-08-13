@@ -6,11 +6,18 @@
 <!--#######################################-->
 
 <launch>
+    <arg name="robot_type" default="archer"/>
+
     <!-- keyboard teleop -->
     <include file="$(find hex_ros_teleop_keyboard)/launch/ros1/teleop_keyboard.launch"/>
 
-    <!-- real arm driver (archer y6) -->
-    <include file="$(find hex_ros_robot_arm)/launch/ros1/archer.launch"/>
+    <!-- real arm driver (archer / firefly, selectable) -->
+    <group if="$(eval arg('robot_type') == 'archer')">
+        <include file="$(find hex_ros_robot_arm)/launch/ros1/archer.launch"/>
+    </group>
+    <group unless="$(eval arg('robot_type') == 'archer')">
+        <include file="$(find hex_ros_robot_arm)/launch/ros1/firefly.launch"/>
+    </group>
 
     <!-- arm replay node -->
     <include file="$(find hex_ros_demo_arm_replay)/launch/ros1/arm_replay.launch"/>

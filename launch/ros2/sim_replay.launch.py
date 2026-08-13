@@ -51,7 +51,11 @@ def generate_launch_description():
     # arm trajectory node
     traj_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            PathJoinSubstitution([traj_pkg_path, "arm_replay.launch.py"])), )
+            PathJoinSubstitution([traj_pkg_path, "arm_replay.launch.py"])),
+        launch_arguments={
+            'use_sim_time': 'true',
+        }.items(),
+    )
 
     return LaunchDescription([
         viewer_arg,

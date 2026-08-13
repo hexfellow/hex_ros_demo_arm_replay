@@ -18,9 +18,7 @@ import numpy as np
 
 # from ament_index_python.packages import get_package_share_directory
 
-# scrpit_path = os.path.abspath(os.path.dirname(__file__))
-# sys.path.append(scrpit_path)
-from .replay_util import DataInterface
+from replay_util import DataInterface
 
 from hex_util_msg.dataclass.dataclass_base import (
     HexDcBaseVector3,
@@ -36,8 +34,8 @@ from hex_util_msg.dataclass.dataclass_robo import (
     HexDcRoboManipCtrl,
 )
 
-from .PointLoader import TaskConfigLoader
-from .TrajectoryController import (
+from PointLoader import TaskConfigLoader
+from TrajectoryController import (
     TrajectoryPlanner,
     Move2TargetPlanner,
 )
