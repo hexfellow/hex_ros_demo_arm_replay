@@ -94,9 +94,9 @@ class ArmReplay:
 
             # Determine config path
             if waypoints_path:
-                self.__data_interface.logi(f"[init mode]: get path : {waypoints_path}")
+                self.__data_interface.logi(f"get waypoints, Path : {waypoints_path}")
             else:
-                self.__data_interface.loge(f"[init mode]: Dont get waypoints path ")
+                self.__data_interface.loge(f"Dont get waypoints path ")
                 sys.exit(1)
 
             config_loader = TaskConfigLoader(config_path=waypoints_path)
@@ -346,7 +346,7 @@ class ArmReplay:
             self.__move_first_target()
 
         except Exception as e:
-            self.__data_interface.loge(f"init process err,  {e} \n")
+            self.__data_interface.loge(f"move first target point err,  {e} \n")
             # traceback.print_exc()
 
     def __exit_process(self):
@@ -354,7 +354,7 @@ class ArmReplay:
             self.__return_to_home()
         except Exception as e:
             # traceback.print_exc()
-            self.__data_interface.loge(f"init process err,  {e} \n")
+            self.__data_interface.loge(f"return to home err,  {e} \n")
 
     def __work_process(self):
         
@@ -395,7 +395,6 @@ class ArmReplay:
                     if target_pos is not None:
                         ctrl = self.__build_traj_ctrl(target_pos)
                         self.__data_interface.pub_manip_ctrl(ctrl)
-                        self.__data_interface.logd(f"pos: {target_pos[1]}")
                         
                 self.__data_interface.sleep()
                 
