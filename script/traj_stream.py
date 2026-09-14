@@ -81,16 +81,17 @@ class TrajStream:
 
         # 获取夹爪状态（兼容无夹爪的 robot 类型）
         grip_pos = []
-        get_grip = getattr(robot, 'get_grip_state', None)
-        if get_grip is not None:
-            grip_state = robot.get_grip_state()
-            if grip_state is not None:
-                grip_pos = [round(float(v), dec)
-                            for v in grip_state.grip_state.jnt.position]
+        if self._gripper_type != "empty":
+            get_grip = getattr(robot, 'get_grip_state', None)
+            if get_grip is not None:
+                grip_state = robot.get_grip_state()
+                if grip_state is not None:
+                    grip_pos = [round(float(v), dec)
+                                for v in grip_state.grip_state.jnt.position]
+                else:
+                    print(f"\033[33m[TrajStream] Warning: robot type '{self._robot_type}' has no grip state available.\033[0m")
             else:
-                print(f"\033[33m[TrajStream] Warning: robot type '{self._robot_type}' has no grip state available.\033[0m")
-        else:
-            print(f"\033[33m[TrajStream] Warning: robot type '{self._robot_type}' has no 'get_grip_state' method.\033[0m")
+                print(f"\033[33m[TrajStream] Warning: robot type '{self._robot_type}' has no 'get_grip_state' method.\033[0m")
         
         
         point = {

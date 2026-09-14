@@ -11,7 +11,8 @@ from hex_driver_robot import (
     HexRobotArcherY6Params,
     HexRobotFireflyY6,
     HexRobotFireflyY6Params,
-
+    HexRobotFireflyY6H2_40,
+    HexRobotFireflyY6H2_40Params,
 )
 from hex_util_msg.dataclass import HexDcBaseVector3
 
@@ -65,7 +66,7 @@ def main() -> None:
         "--robot-type",
         type=str,
         default="archer_y6",
-        choices=["archer_y6", "firefly_y6"],
+        choices=["archer_y6", "firefly_y6", "firefly_y6_H2_40"],
         help="Robot type name (e.g. archer_y6, firefly_y6)",
     )
     
@@ -88,6 +89,7 @@ def main() -> None:
     _ROBOT_MAP = {
         "archer_y6": (HexRobotArcherY6Params, HexRobotArcherY6),
         "firefly_y6": (HexRobotFireflyY6Params, HexRobotFireflyY6),
+        "firefly_y6_H2_40": (HexRobotFireflyY6H2_40Params, HexRobotFireflyY6H2_40),
     }
     _params_cls, _robot_cls = _ROBOT_MAP[args.robot_type]
     params = _params_cls(

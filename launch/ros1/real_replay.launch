@@ -1,22 +1,37 @@
 <!--#######################################-->
-<!-- Copyright (c) 2026  Dong Zhaorui.     -->
+<!-- Copyright (c) 2026  taigon26.         -->
 <!-- All rights reserved.                  -->
-<!-- Author: Dong Zhaorui 847235539@qq.com -->
+<!-- Author: taigon26 thetaigon@qq.com -->
 <!-- Date  : 2026-06-30                    -->
 <!--#######################################-->
 
 <launch>
-    <arg name="robot_type" default="archer"/>
+    <arg name="robot_host" default="172.18.20.80"/>
+    <arg name="robot_port" default="8439"/>
+    <arg name="robot_grip_type" default="empty"/>
+    <arg name="robot_type" default="firefly"/>
+    <arg name="enable_keyboard" default="true"/>
 
     <!-- keyboard teleop -->
-    <include file="$(find hex_ros_teleop_keyboard)/launch/ros1/teleop_keyboard.launch"/>
+    <include if="$(arg enable_keyboard)"
+             file="$(find hex_ros_teleop_keyboard)/launch/ros1/teleop_keyboard.launch"/>
 
     <!-- real arm driver (archer / firefly, selectable) -->
     <group if="$(eval arg('robot_type') == 'archer')">
-        <include file="$(find hex_ros_robot_arm)/launch/ros1/archer.launch"/>
+        <include file="$(find hex_ros_robot_arm)/launch/ros1/archer.launch">
+            <arg name="robot_host" value="$(arg robot_host)"/>
+            <arg name="robot_port" value="$(arg robot_port)"/>
+            <arg name="robot_grip_type" value="$(arg robot_grip_type)"/>
+            <arg name="test" value="false"/>
+        </include>
     </group>
     <group unless="$(eval arg('robot_type') == 'archer')">
-        <include file="$(find hex_ros_robot_arm)/launch/ros1/firefly.launch"/>
+        <include file="$(find hex_ros_robot_arm)/launch/ros1/firefly.launch">
+            <arg name="robot_host" value="$(arg robot_host)"/>
+            <arg name="robot_port" value="$(arg robot_port)"/>
+            <arg name="robot_grip_type" value="$(arg robot_grip_type)"/>
+            <arg name="test" value="false"/>
+        </include>
     </group>
 
     <!-- arm replay node -->
