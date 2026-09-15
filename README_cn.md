@@ -39,10 +39,10 @@ hex_ros_demo_arm_replay/
 │   ├── arm_replay.py                 #   主节点：轨迹回放控制循环
 │   ├── PointLoader.py                #   轨迹 JSON 文件加载器
 │   ├── TrajectoryController.py       #   轨迹规划器（线性插值）
-│   └── replay_util/                  #   双层 ROS 接口抽象层
-│       ├── interface_base.py         #     抽象基类（InterfaceBase）
-│       ├── ros1_interface.py         #     ROS 1 DataInterface
-│       └── ros2_interface.py         #     ROS 2 DataInterface
+│   └── replay_util/                        #   双层 ROS 接口抽象层
+│       ├── interface_base.py               #     抽象基类（InterfaceBase）
+│       ├── ros1_interface.py               #     ROS 1 DataInterface
+│       └── ros2_interface.py               #     ROS 2 DataInterface
 ├── script/                           # 录制脚本
 │   ├── arm_record.py                 #   主录制入口（record / stream 模式）
 │   ├── traj_recorder.py              #   键盘触发式录制器
@@ -88,7 +88,9 @@ hex_ros_demo_arm_replay/
 | `end_position` | `[0.0, -1.5, 3.0, 0.0, 0.0, 0.0]` | 结束（归位）目标位置 [rad] |
 | `expected_time` | 5.0 | 往返运动预期时长 [s] |
 | `waypoints_path` | "" | 轨迹 JSON 文件路径（为空时退出节点） |
-> 参数在`config/`中设置
+
+> 参数在 `config/` 中设置。
+
 ---
 
 ## 5. 依赖关系
@@ -140,7 +142,7 @@ git clone https://github.com/hexfellow/teleop_keyboard.git
 source /opt/ros/noetic/setup.bash
 cd <your_ws>
 catkin_make
-source devel/setup.bash 
+source devel/setup.bash
 ```
 
 **ROS 2：**
@@ -149,48 +151,97 @@ source devel/setup.bash
 source /opt/ros/humble/setup.bash
 cd <your_ws>
 colcon build
-source install/setup.bash 
+source install/setup.bash
 ```
-
-
 
 ### 4. 使用包
 
-arm_replay 提供多个 launch 文件，一键启动不同场景（轨迹 JSON 路径在 `config/<ros_version>/replay_param.yaml` 中配置）：
+arm_replay 提供多个 launch 文件，一键启动不同场景。轨迹参数在
+`config/<ros_version>/replay_param.yaml` 中配置。
 
-**ROS 1：**
+#### ROS 1
+
+**仅启动回放节点：**
 
 ```shell
-# 仅启动回放节点
 roslaunch hex_ros_demo_arm_replay arm_replay.launch
+```
 
-# 真机完整启动：键盘遥控 + 机械臂驱动 + 轨迹回放
+**真机完整启动：**
+
+先修改 `launch/ros1/real_replay.launch` 中的参数：
+
+```xml
+<arg name="robot_host" default="192.168.1.100"/>
+<arg name="robot_port" default="8439"/>
+<arg name="robot_grip_type" default="empty"/>
+<arg name="robot_type" default="firefly"/>
+<arg name="enable_keyboard" default="true"/>
+```
+
+然后启动：
+
+```shell
 roslaunch hex_ros_demo_arm_replay real_replay.launch
+```
 
-# 仿真完整启动：仿真环境 + 键盘遥控 + 轨迹回放
+**仿真完整启动：**
+
+```shell
 roslaunch hex_ros_demo_arm_replay sim_replay.launch viewer:=true rviz:=true
 ```
 
-**ROS 2：**
+#### ROS 2
+
+**仅启动回放节点：**
 
 ```shell
-# 仅启动回放节点
 ros2 launch hex_ros_demo_arm_replay arm_replay.launch.py
+```
 
-# 真机完整启动：键盘遥控 + 机械臂驱动 + 轨迹回放
-ros2 launch hex_ros_demo_arm_replay real_traj.launch.py
+**真机完整启动：**
 
-# 仿真完整启动：仿真环境 + 键盘遥控 + 轨迹回放
-ros2 launch hex_ros_demo_arm_replay sim_traj.launch.py viewer:=true rviz:=true
-``` 
-> 请确保你的param参数设置无误
+先修改 `launch/ros2/real_replay.launch.py` 中的参数：
+
+```python
+robot_host_arg = DeclareLaunchArgument(
+    name='robot_host',
+    default_value='192.168.1.100')
+robot_port_arg = DeclareLaunchArgument(
+    name='robot_port',
+    default_value='8439')
+robot_grip_type_arg = DeclareLaunchArgument(
+    name='robot_grip_type',
+    default_value='empty')
+robot_type_arg = DeclareLaunchArgument(
+    name='robot_type',
+    default_value='firefly')
+enable_keyboard_arg = DeclareLaunchArgument(
+    name='enable_keyboard',
+    default_value='true')
+```
+
+然后启动：
+
+```shell
+ros2 launch hex_ros_demo_arm_replay real_replay.launch.py
+```
+
+**仿真完整启动：**
+
+```shell
+ros2 launch hex_ros_demo_arm_replay sim_replay.launch.py viewer:=true rviz:=true
+```
+
+> 请先在对应的 launch 文件中设置真机连接参数、机器人类型、夹爪类型和 `enable_keyboard`，再启动。
 > 轨迹 JSON 文件可通过录制脚本生成。
 
-键盘控制：
+#### 键盘控制
 
 - **`s`** — 开始轨迹回放
 - **`q`** — 停止回放并归位
 
+---
 
 ### 5. 使用脚本
 
